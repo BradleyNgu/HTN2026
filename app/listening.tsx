@@ -22,6 +22,7 @@ import {
 } from "@/features/background/backgroundListener";
 import { useBackgroundListenerStatus } from "@/features/background/useBackgroundListenerStatus";
 import { getSelectedCaller } from "@/features/escape/callerProfiles";
+import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useConversationDetector } from "@/features/listening/useConversationDetector";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, radius, spacing } from "@/theme";
@@ -39,6 +40,7 @@ export default function ListeningScreen() {
   const { settings } = useSettings();
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
+  const [phoneCallError, setPhoneCallError] = useState<string | null>(null);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const caller = getSelectedCaller(settings);
@@ -48,18 +50,24 @@ export default function ListeningScreen() {
 
   const handleTrigger = useCallback(
     (reason: string) => {
-      setTriggerReason(reason);
+      setTriggerReason(`${reason} · requesting a real phone call`);
+      setPhoneCallError(null);
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
       timer.current = setTimeout(() => {
-        router.replace({
-          pathname: "/incoming-call",
-          params: { reason },
-        });
+        if (settings.defaultAlert === "tornado") {
+          setPhoneCallError("Tornado alerts do not place a phone call.");
+          return;
+        }
+        void triggerConfiguredPhoneCall(settings.defaultAlert)
+          .then(() => setTriggerReason("Real phone call requested"))
+          .catch(() => {
+            setPhoneCallError("The real phone call could not be placed.");
+          });
       }, settings.triggerDelaySeconds * 1000);
     },
-    [settings.triggerDelaySeconds],
+    [settings.defaultAlert, settings.triggerDelaySeconds],
   );
 
   const detector = useConversationDetector({
@@ -88,6 +96,8 @@ export default function ListeningScreen() {
         triggerDelaySeconds: settings.triggerDelaySeconds,
         apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
         locale: "en-US",
+        callType:
+          settings.defaultAlert === "tornado" ? null : settings.defaultAlert,
       });
       return true;
     } catch (error) {
@@ -101,6 +111,7 @@ export default function ListeningScreen() {
     detector,
     settings.sensitivity,
     settings.triggerDelaySeconds,
+    settings.defaultAlert,
     usesBackgroundService,
   ]);
 
@@ -132,11 +143,11 @@ export default function ListeningScreen() {
     ? backgroundStatus.active
     : detector.isRecognizing;
   const visibleError = usesBackgroundService
-    ? backgroundError ?? backgroundStatus.lastError
-    : detector.error;
+    ? phoneCallError ?? backgroundError ?? backgroundStatus.lastError
+    : phoneCallError ?? detector.error;
   const statusLabel = usesBackgroundService
     ? backgroundStatus.phase === "triggered"
-      ? "Escape ready — open the notification"
+      ? "Real phone call requested"
       : backgroundStatus.phase === "reconnecting"
         ? "Reconnecting speech recognition"
         : backgroundStatus.phase === "evaluating"
@@ -163,7 +174,7 @@ export default function ListeningScreen() {
         <Text style={styles.title}>
           {phase === "suspected" ? "Conversation slowing down" : "Ready to listen"}
         </Text>
-        <Text style={styles.subtitle}>{visibleError ?? "Alert: Mom / GF / Boss"}</Text>
+        <Text style={styles.subtitle}>{triggerReason ?? visibleError ?? "Alert: Mom / GF / Boss"}</Text>
         <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
         <Text style={styles.helper}>Keyword + situation check{"\n"}are active</Text>
 
@@ -182,7 +193,7 @@ export default function ListeningScreen() {
             ))}
           </View>
           <Text style={styles.progressCopy}>
-            Two confident checks are required before the call appears.
+            Two confident checks are required before Twilio places the call.
           </Text>
         </View>
 

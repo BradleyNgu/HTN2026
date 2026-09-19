@@ -45,4 +45,27 @@ class ClassificationClient(private val apiUrl: String) {
       connection.disconnect()
     }
   }
+
+  fun triggerCall(callType: String) {
+    require(callType in setOf("mom", "boss", "girlfriend")) {
+      "A supported call type is required"
+    }
+    val connection = URL("${apiUrl.trimEnd('/')}/call").openConnection() as HttpURLConnection
+    try {
+      connection.requestMethod = "POST"
+      connection.connectTimeout = 12_000
+      connection.readTimeout = 20_000
+      connection.doOutput = true
+      connection.setRequestProperty("Content-Type", "application/json")
+      connection.setRequestProperty("Accept", "application/json")
+      connection.outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
+        writer.write(JSONObject().put("callType", callType).toString())
+      }
+      if (connection.responseCode !in 200..299) {
+        throw IllegalStateException("Call endpoint returned HTTP ${connection.responseCode}")
+      }
+    } finally {
+      connection.disconnect()
+    }
+  }
 }

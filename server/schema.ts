@@ -11,4 +11,10 @@ export const classificationSchema = z.object({
   reason: z.string().max(160),
 });
 
+export const phoneCallTypeSchema = z.enum(["mom", "boss", "girlfriend"]);
+
+export const callRequestSchema = z.object({
+  callType: phoneCallTypeSchema,
+}).strict();
+
 export type ClassificationResult = z.infer<typeof classificationSchema>;

@@ -4,14 +4,12 @@ import BackgroundListenerModule, {
   type BackgroundListenerOptions,
   type BackgroundListenerStatus,
   type BackgroundTrigger,
-  type PendingBackgroundTrigger,
 } from "../../../modules/background-listener";
 
 export type {
   BackgroundListenerOptions,
   BackgroundListenerStatus,
   BackgroundTrigger,
-  PendingBackgroundTrigger,
 };
 
 export const idleBackgroundStatus: BackgroundListenerStatus = {
@@ -56,10 +54,6 @@ export function stopBackgroundListening() {
 
 export function getBackgroundListeningStatus() {
   return BackgroundListenerModule?.getStatus() ?? idleBackgroundStatus;
-}
-
-export function consumePendingBackgroundTrigger() {
-  return BackgroundListenerModule?.consumePendingTrigger() ?? null;
 }
 
 export function addBackgroundStatusListener(

@@ -42,6 +42,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
   private var restartAttempts = 0
   private var startedAt = 0L
   private var wordsHeard = 0
+  private var triggerDelayElapsed = false
+  private var callRequestFinished = true
   private val cleanup = CleanupCoordinator(
     listOf(
       { mainHandler.removeCallbacksAndMessages(null) },
@@ -74,12 +76,16 @@ class BackgroundListeningService : Service(), RecognitionListener {
       triggerDelaySeconds = intent.getIntExtra(EXTRA_TRIGGER_DELAY, 0).coerceIn(0, 60),
       apiUrl = intent.getStringExtra(EXTRA_API_URL).orEmpty(),
       locale = intent.getStringExtra(EXTRA_LOCALE).orEmpty().ifBlank { "en-US" },
+      callType = intent.getStringExtra(EXTRA_CALL_TYPE)
+        ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
     )
     gate = DetectionGate(config!!.sensitivity)
     stopping = false
     triggered = false
     startedAt = System.currentTimeMillis()
     wordsHeard = 0
+    triggerDelayElapsed = false
+    callRequestFinished = true
     acquireWakeLock()
     updateStatus(true, "starting")
     createRecognizer(preferOffline = true)
@@ -214,7 +220,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
     transcript.clear()
     updateStatus(false, "triggered")
     val serviceConfig = config ?: return stopListening()
-    persistTrigger(serviceConfig, reason)
+    callRequestFinished = serviceConfig.callType == null
+    triggerDelayElapsed = false
     BackgroundListenerEventBus.emit(
       "onTrigger",
       mapOf(
@@ -225,10 +232,31 @@ class BackgroundListeningService : Service(), RecognitionListener {
     )
     val delayMs = serviceConfig.triggerDelaySeconds * 1_000L
     mainHandler.postDelayed({
-      postTriggerNotification(serviceConfig, reason)
-      stopForeground(STOP_FOREGROUND_REMOVE)
-      stopSelf()
+      triggerDelayElapsed = true
+      serviceConfig.callType?.let { requestPhoneCall(serviceConfig, it) }
+      finishTriggeredServiceIfReady()
     }, delayMs)
+  }
+
+  private fun requestPhoneCall(serviceConfig: ServiceConfig, callType: String) {
+    classifierExecutor.execute {
+      try {
+        ClassificationClient(serviceConfig.apiUrl).triggerCall(callType)
+      } catch (_: Exception) {
+        // A failed Twilio attempt still stops the completed listening session.
+      } finally {
+        mainHandler.post {
+          callRequestFinished = true
+          finishTriggeredServiceIfReady()
+        }
+      }
+    }
+  }
+
+  private fun finishTriggeredServiceIfReady() {
+    if (!triggerDelayElapsed || !callRequestFinished) return
+    stopForeground(STOP_FOREGROUND_REMOVE)
+    stopSelf()
   }
 
   private fun createRecognizer(preferOffline: Boolean) {
@@ -298,7 +326,6 @@ class BackgroundListeningService : Service(), RecognitionListener {
     if (stopping) return
     stopping = true
     cleanup.run()
-    if (!triggered) clearPendingTrigger()
     BackgroundListenerState.update(ListenerStatus())
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
@@ -363,16 +390,6 @@ class BackgroundListeningService : Service(), RecognitionListener {
         enableVibration(false)
       },
     )
-    manager.createNotificationChannel(
-      NotificationChannel(
-        TRIGGER_CHANNEL_ID,
-        "Escape calls",
-        NotificationManager.IMPORTANCE_HIGH,
-      ).apply {
-        description = "Alerts when an escape call is ready"
-        enableVibration(true)
-      },
-    )
   }
 
   private fun listeningNotification(): Notification {
@@ -406,58 +423,6 @@ class BackgroundListeningService : Service(), RecognitionListener {
       .build()
   }
 
-  private fun postTriggerNotification(serviceConfig: ServiceConfig, reason: String) {
-    val uri = Uri.Builder()
-      .scheme("conversationescape")
-      .authority("incoming-call")
-      .appendQueryParameter("callerId", serviceConfig.callerId)
-      .appendQueryParameter("reason", reason)
-      .build()
-    val openPendingIntent = PendingIntent.getActivity(
-      this,
-      20,
-      Intent(Intent.ACTION_VIEW, uri).setPackage(packageName),
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
-    val dismissPendingIntent = PendingIntent.getBroadcast(
-      this,
-      21,
-      Intent(this, BackgroundNotificationReceiver::class.java).apply {
-        action = BackgroundNotificationReceiver.ACTION_DISMISS_TRIGGER
-      },
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
-    val notification = NotificationCompat.Builder(this, TRIGGER_CHANNEL_ID)
-      .setSmallIcon(applicationInfo.icon)
-      .setContentTitle("${serviceConfig.callerName} is calling")
-      .setContentText(serviceConfig.callerRelationship)
-      .setStyle(
-        NotificationCompat.BigTextStyle()
-          .bigText("${serviceConfig.callerRelationship} · Tap to open the simulated call"),
-      )
-      .setPriority(NotificationCompat.PRIORITY_HIGH)
-      .setCategory(NotificationCompat.CATEGORY_REMINDER)
-      .setAutoCancel(true)
-      .setContentIntent(openPendingIntent)
-      .setDefaults(NotificationCompat.DEFAULT_ALL)
-      .addAction(0, "Open call", openPendingIntent)
-      .addAction(0, "Dismiss", dismissPendingIntent)
-      .build()
-    NotificationManagerCompat.from(this).notify(TRIGGER_NOTIFICATION_ID, notification)
-  }
-
-  private fun persistTrigger(serviceConfig: ServiceConfig, reason: String) {
-    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
-      .putString("callerId", serviceConfig.callerId)
-      .putString("reason", reason)
-      .putLong("triggeredAt", System.currentTimeMillis())
-      .apply()
-  }
-
-  private fun clearPendingTrigger() {
-    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().clear().apply()
-  }
-
   override fun onDestroy() {
     cleanup.run()
     if (BackgroundListenerState.status.active) {
@@ -476,11 +441,9 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_TRIGGER_DELAY = "triggerDelaySeconds"
     const val EXTRA_API_URL = "apiUrl"
     const val EXTRA_LOCALE = "locale"
+    const val EXTRA_CALL_TYPE = "callType"
 
     const val LISTENING_NOTIFICATION_ID = 7401
-    const val TRIGGER_NOTIFICATION_ID = 7402
     private const val LISTENING_CHANNEL_ID = "background-listening"
-    private const val TRIGGER_CHANNEL_ID = "escape-calls"
-    const val PREFS_NAME = "background-listener-trigger"
   }
 }

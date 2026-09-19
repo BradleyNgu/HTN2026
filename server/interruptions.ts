@@ -118,3 +118,10 @@ export async function phoneCall(
   const body = (await response.json()) as { sid: string };
   return body.sid;
 }
+
+export async function callConfiguredRecipient(
+  phoneCallType: PhoneCallType,
+): Promise<string> {
+  const recipient = requireEnv("TWILIO_RECIPIENT_MOM");
+  return phoneCall(phoneCallType, recipient);
+}

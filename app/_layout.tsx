@@ -30,14 +30,6 @@ export default function RootLayout() {
           name="listening"
           options={{ title: "Live session", gestureEnabled: false }}
         />
-        <Stack.Screen
-          name="incoming-call"
-          options={{
-            headerShown: false,
-            presentation: "fullScreenModal",
-            gestureEnabled: false,
-          }}
-        />
       </Stack>
     </SettingsProvider>
   );

@@ -6,9 +6,18 @@ import {
   Classifier,
   classifyConversation,
 } from "./classifier";
-import { classifyRequestSchema } from "./schema";
+import {
+  PhoneCallType,
+  callConfiguredRecipient,
+} from "./interruptions";
+import { callRequestSchema, classifyRequestSchema } from "./schema";
 
-export function createApp(classifier: Classifier = classifyConversation) {
+export type PhoneCaller = (callType: PhoneCallType) => Promise<string>;
+
+export function createApp(
+  classifier: Classifier = classifyConversation,
+  callRecipient: PhoneCaller = callConfiguredRecipient,
+) {
   const app = express();
   const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -63,6 +72,34 @@ export function createApp(classifier: Classifier = classifyConversation) {
         response
           .status(isMissingKey ? 503 : 502)
           .json({ error: "Classification is temporarily unavailable" });
+      }
+    },
+  );
+
+  app.post(
+    "/call",
+    rateLimit({
+      windowMs: 10 * 60_000,
+      limit: 3,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { error: "Too many call requests" },
+    }),
+    async (request, response) => {
+      const parsed = callRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        response.status(400).json({ error: "Invalid call request" });
+        return;
+      }
+
+      try {
+        await callRecipient(parsed.data.callType);
+        response.setHeader("Cache-Control", "no-store");
+        response.status(202).json({ ok: true });
+      } catch {
+        response
+          .status(502)
+          .json({ error: "Phone call is temporarily unavailable" });
       }
     },
   );

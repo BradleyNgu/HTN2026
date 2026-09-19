@@ -12,6 +12,7 @@ class BackgroundListenerOptions : Record {
   @Field val triggerDelaySeconds: Int = 0
   @Field val apiUrl: String = ""
   @Field val locale: String = "en-US"
+  @Field val callType: String? = null
 }
 
 data class ServiceConfig(
@@ -22,6 +23,7 @@ data class ServiceConfig(
   val triggerDelaySeconds: Int,
   val apiUrl: String,
   val locale: String,
+  val callType: String?,
 )
 
 data class ListenerStatus(

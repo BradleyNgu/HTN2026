@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
-import androidx.core.app.NotificationManagerCompat
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -45,6 +44,7 @@ class BackgroundListenerModule : Module() {
         putExtra(BackgroundListeningService.EXTRA_TRIGGER_DELAY, options.triggerDelaySeconds)
         putExtra(BackgroundListeningService.EXTRA_API_URL, options.apiUrl)
         putExtra(BackgroundListeningService.EXTRA_LOCALE, options.locale)
+        putExtra(BackgroundListeningService.EXTRA_CALL_TYPE, options.callType)
       }
       ContextCompat.startForegroundService(context, intent)
       BackgroundListenerState.status.toMap()
@@ -63,30 +63,6 @@ class BackgroundListenerModule : Module() {
 
     Function("getStatus") {
       BackgroundListenerState.status.toMap()
-    }
-
-    Function("consumePendingTrigger") {
-      val context = appContext.reactContext
-        ?: throw IllegalStateException("React context is unavailable")
-      val preferences = context.getSharedPreferences(
-        BackgroundListeningService.PREFS_NAME,
-        android.content.Context.MODE_PRIVATE,
-      )
-      val callerId = preferences.getString("callerId", null)
-      val reason = preferences.getString("reason", null)
-      val triggeredAt = preferences.getLong("triggeredAt", 0)
-      preferences.edit().clear().apply()
-      NotificationManagerCompat.from(context)
-        .cancel(BackgroundListeningService.TRIGGER_NOTIFICATION_ID)
-      if (callerId == null) {
-        null
-      } else {
-        mapOf(
-          "callerId" to callerId,
-          "reason" to reason,
-          "triggeredAt" to triggeredAt,
-        )
-      }
     }
   }
 }

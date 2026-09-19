@@ -6,6 +6,7 @@ export type BackgroundListenerOptions = {
   triggerDelaySeconds: number;
   apiUrl: string;
   locale: string;
+  callType: "mom" | "boss" | "girlfriend" | null;
 };
 
 export type BackgroundListenerStatus = {
@@ -28,13 +29,6 @@ export type BackgroundTrigger = {
   callerId: string;
   callerName: string;
   reason: string;
-};
-
-export type PendingBackgroundTrigger = Omit<
-  BackgroundTrigger,
-  "callerName"
-> & {
-  triggeredAt: number;
 };
 
 export type BackgroundListenerEvents = {
