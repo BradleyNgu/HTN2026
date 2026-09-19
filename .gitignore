@@ -1,2 +1,6 @@
 # Local credentials -- never commit these.
 api_keys.py
+
+# Python bytecode caches can contain values from local credential modules.
+__pycache__/
+*.py[cod]
