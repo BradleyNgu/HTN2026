@@ -41,6 +41,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
   private var triggered = false
   private var restartAttempts = 0
   private var startedAt = 0L
+  private var wordsHeard = 0
   private val cleanup = CleanupCoordinator(
     listOf(
       { mainHandler.removeCallbacksAndMessages(null) },
@@ -78,6 +79,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     stopping = false
     triggered = false
     startedAt = System.currentTimeMillis()
+    wordsHeard = 0
     acquireWakeLock()
     updateStatus(true, "starting")
     createRecognizer(preferOffline = true)
@@ -125,6 +127,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
         SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE,
         SpeechRecognizer.ERROR_RECOGNIZER_BUSY,
         SpeechRecognizer.ERROR_SERVER,
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
+        SpeechRecognizer.ERROR_NO_MATCH,
       )
     ) {
       createRecognizer(preferOffline = false)
@@ -149,7 +153,9 @@ class BackgroundListeningService : Service(), RecognitionListener {
     previousPartial = if (isFinal) "" else text
     if (delta.isBlank()) return
 
+    wordsHeard += delta.trim().split(Regex("\\s+")).size
     val window = transcript.add(delta)
+    updateStatus(true, "listening")
     val keyword = ImmediateKeywords.find(transcript.recentText())
     if (keyword != null && gate.triggerImmediately()) {
       trigger("Detected “$keyword” locally")
@@ -205,6 +211,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     triggered = true
     stopRecognizer()
     releaseWakeLock()
+    transcript.clear()
     updateStatus(false, "triggered")
     val serviceConfig = config ?: return stopListening()
     persistTrigger(serviceConfig, reason)
@@ -332,6 +339,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
         active = active,
         phase = phase,
         startedAt = if (active) startedAt else 0,
+        wordsHeard = wordsHeard,
+        recentText = if (active) transcript.recentText() else "",
         lastError = error,
       ),
     )

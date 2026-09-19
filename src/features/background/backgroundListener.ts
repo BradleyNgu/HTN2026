@@ -18,6 +18,8 @@ export const idleBackgroundStatus: BackgroundListenerStatus = {
   active: false,
   phase: "idle",
   startedAt: 0,
+  wordsHeard: 0,
+  recentText: "",
   lastError: null,
 };
 
