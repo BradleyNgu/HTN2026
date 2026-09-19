@@ -1,15 +1,22 @@
 import * as DocumentPicker from "expo-document-picker";
 import { Directory, File, Paths } from "expo-file-system";
+import { Platform } from "react-native";
 
 import { ManagedAudio } from "@/types";
 import { isSupportedMp3 } from "./callAudio";
 
 const MAX_MP3_BYTES = 25 * 1024 * 1024;
-const audioDirectory = new Directory(Paths.document, "caller-audio");
+const audioDirectory = Platform.OS === "web"
+  ? null
+  : new Directory(Paths.document, "caller-audio");
 
 export async function pickAndStoreMp3(
   callerId: string,
 ): Promise<ManagedAudio | null> {
+  if (!audioDirectory) {
+    throw new Error("MP3 caller audio is available in the mobile app only.");
+  }
+
   const result = await DocumentPicker.getDocumentAsync({
     type: ["audio/mpeg", "audio/mp3"],
     copyToCacheDirectory: true,
@@ -41,7 +48,9 @@ export async function pickAndStoreMp3(
 }
 
 export function managedAudioExists(audio: ManagedAudio | null) {
-  if (!audio || !audio.uri.startsWith(audioDirectory.uri)) return false;
+  if (!audioDirectory || !audio || !audio.uri.startsWith(audioDirectory.uri)) {
+    return false;
+  }
   try {
     return new File(audio.uri).exists;
   } catch {
@@ -50,7 +59,9 @@ export function managedAudioExists(audio: ManagedAudio | null) {
 }
 
 export function deleteManagedAudio(audio: ManagedAudio | null) {
-  if (!audio || !audio.uri.startsWith(audioDirectory.uri)) return;
+  if (!audioDirectory || !audio || !audio.uri.startsWith(audioDirectory.uri)) {
+    return;
+  }
   try {
     const file = new File(audio.uri);
     if (file.exists) file.delete();

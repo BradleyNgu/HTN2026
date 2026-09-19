@@ -1,13 +1,16 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useColorScheme } from "react-native";
 
 import { SettingsProvider } from "@/store/SettingsContext";
 import { colors } from "@/theme";
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+
   return (
     <SettingsProvider>
-      <StatusBar style="light" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },
@@ -17,7 +20,6 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="keyword-sets" options={{ headerShown: false }} />
         <Stack.Screen name="situations" options={{ headerShown: false }} />
@@ -28,7 +30,7 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="listening"
-          options={{ title: "Live session", gestureEnabled: false }}
+          options={{ headerShown: false, gestureEnabled: false }}
         />
       </Stack>
     </SettingsProvider>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Conversation Escape",
+    "name": "TalkBlock",
     "slug": "conversation-escape",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,8 +10,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.htn2026.conversationescape",
       "infoPlist": {
-        "NSSpeechRecognitionUsageDescription": "Conversation Escape transcribes nearby speech on your device to detect stalled conversations.",
-        "NSMicrophoneUsageDescription": "Conversation Escape uses your microphone only while you start a listening session."
+        "NSSpeechRecognitionUsageDescription": "TalkBlock transcribes nearby speech on your device to detect stalled conversations.",
+        "NSMicrophoneUsageDescription": "TalkBlock uses your microphone only while you start a listening session."
       }
     },
     "android": {
@@ -30,8 +30,8 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Allow Conversation Escape to listen while a session is active.",
-          "speechRecognitionPermission": "Allow Conversation Escape to transcribe speech on this device."
+          "microphonePermission": "Allow TalkBlock to listen while a session is active.",
+          "speechRecognitionPermission": "Allow TalkBlock to transcribe speech on this device."
         }
       ],
       "expo-status-bar",

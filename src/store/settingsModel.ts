@@ -2,10 +2,10 @@ import { starterCaller } from "@/features/escape/callerProfiles";
 import { AppSettings, CallerProfile, Sensitivity, SituationType } from "@/types";
 
 export const defaultSituations: SituationType[] = [
-  { id: "mom", title: "Mom", description: "Detects when you're with your mom.", enabled: true },
-  { id: "student", title: "Student", description: "Detects when you're with a student.", enabled: false },
-  { id: "boss", title: "Boss", description: "Detects when you're with your boss.", enabled: true },
-  { id: "tornado", title: "Tornado", description: "Detects severe weather nearby.", enabled: false },
+  { id: "mom", title: "Mom", description: "You are stuck in a long family conversation.", enabled: true },
+  { id: "student", title: "Student", description: "You are stuck explaining something one-on-one.", enabled: false },
+  { id: "boss", title: "Boss", description: "Your boss asks you to stay longer.", enabled: true },
+  { id: "tornado", title: "Tornado", description: "Severe weather is moving into the area.", enabled: false },
 ];
 
 export const initialSettings: AppSettings = {
@@ -18,6 +18,7 @@ export const initialSettings: AppSettings = {
   keywordSets: ["ai", "big data", "jargon"],
   situations: defaultSituations,
   defaultAlert: "mom",
+  darkMode: false,
 };
 
 type LegacyPreset = {
@@ -100,6 +101,7 @@ function fromLegacy(input: LegacySettings): AppSettings {
     keywordSets: initialSettings.keywordSets,
     situations: initialSettings.situations,
     defaultAlert: initialSettings.defaultAlert,
+    darkMode: false,
   };
 }
 
@@ -131,10 +133,17 @@ export function migrateSettings(input: unknown): AppSettings {
     keywordSets: Array.isArray(candidate.keywordSets)
       ? candidate.keywordSets.filter((keyword): keyword is string => typeof keyword === "string")
       : initialSettings.keywordSets,
-    situations: Array.isArray(candidate.situations)
-      ? candidate.situations
-      : initialSettings.situations,
+    situations: defaultSituations.map((defaultSituation) => {
+      const savedSituation = Array.isArray(candidate.situations)
+        ? candidate.situations.find((situation) => situation?.id === defaultSituation.id)
+        : undefined;
+      return {
+        ...defaultSituation,
+        enabled: savedSituation ? Boolean(savedSituation.enabled) : defaultSituation.enabled,
+      };
+    }),
     defaultAlert: candidate.defaultAlert ?? initialSettings.defaultAlert,
+    darkMode: Boolean(candidate.darkMode),
   };
 }
 
