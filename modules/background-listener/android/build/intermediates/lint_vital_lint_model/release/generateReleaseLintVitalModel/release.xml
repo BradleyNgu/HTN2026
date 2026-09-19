@@ -26,6 +26,6 @@
       applicationId="expo.modules.backgroundlistener"
       generatedSourceFolders="build/generated/ap_generated_sources/release/out:build/generated/source/buildConfig/release"
       generatedResourceFolders="build/generated/res/resValues/release"
-      desugaredMethodsFiles="/private/var/folders/hj/kgj__bp501qf6fjtwms3_q_00000gn/T/cursor-sandbox-cache/bf210d1999bed63724347ee2ab28a08a/gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="/Users/bradleynguyen/.gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>
