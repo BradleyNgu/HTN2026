@@ -1,5 +1,12 @@
 import { starterCaller } from "@/features/escape/callerProfiles";
-import { AppSettings, CallerProfile, Sensitivity } from "@/types";
+import { AppSettings, CallerProfile, Sensitivity, SituationType } from "@/types";
+
+export const defaultSituations: SituationType[] = [
+  { id: "mom", title: "Mom", description: "Detects when you're with your mom.", enabled: true },
+  { id: "student", title: "Student", description: "Detects when you're with a student.", enabled: false },
+  { id: "boss", title: "Boss", description: "Detects when you're with your boss.", enabled: true },
+  { id: "tornado", title: "Tornado", description: "Detects severe weather nearby.", enabled: false },
+];
 
 export const initialSettings: AppSettings = {
   schemaVersion: 2,
@@ -8,6 +15,9 @@ export const initialSettings: AppSettings = {
   selectedCallerId: starterCaller.id,
   sensitivity: "medium",
   triggerDelaySeconds: 2,
+  keywordSets: ["ai", "big data", "jargon"],
+  situations: defaultSituations,
+  defaultAlert: "mom",
 };
 
 type LegacyPreset = {
@@ -87,6 +97,9 @@ function fromLegacy(input: LegacySettings): AppSettings {
     selectedCallerId: caller.id,
     sensitivity: input.sensitivity ?? "medium",
     triggerDelaySeconds: input.triggerDelaySeconds ?? 2,
+    keywordSets: initialSettings.keywordSets,
+    situations: initialSettings.situations,
+    defaultAlert: initialSettings.defaultAlert,
   };
 }
 
@@ -115,6 +128,13 @@ export function migrateSettings(input: unknown): AppSettings {
     selectedCallerId,
     sensitivity: candidate.sensitivity ?? "medium",
     triggerDelaySeconds: candidate.triggerDelaySeconds ?? 2,
+    keywordSets: Array.isArray(candidate.keywordSets)
+      ? candidate.keywordSets.filter((keyword): keyword is string => typeof keyword === "string")
+      : initialSettings.keywordSets,
+    situations: Array.isArray(candidate.situations)
+      ? candidate.situations
+      : initialSettings.situations,
+    defaultAlert: candidate.defaultAlert ?? initialSettings.defaultAlert,
   };
 }
 

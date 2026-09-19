@@ -12,6 +12,9 @@ const settings: AppSettings = {
   sensitivity: "medium",
   triggerDelaySeconds: 0,
   selectedCallerId: "caller-1",
+  keywordSets: ["ai", "big data", "jargon"],
+  situations: [],
+  defaultAlert: "mom",
   callers: [
     {
       id: "caller-1",

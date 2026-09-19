@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { TalkBlockHeader } from "@/components/TalkBlockChrome";
 import {
   getBackgroundListeningStatus,
   isBackgroundListeningSupported,
@@ -156,56 +157,15 @@ export default function ListeningScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safe}>
+      <TalkBlockHeader />
       <View style={styles.content}>
-        <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.statusDot,
-              isRecognizing && styles.statusDotActive,
-            ]}
-          />
-          <Text style={styles.statusText}>
-            {triggerReason
-              ? `Calling ${caller?.name ?? "your caller"}…`
-              : statusLabel}
-          </Text>
-        </View>
-
-        <View style={styles.orbWrap}>
-          <View style={styles.orbOuter}>
-            <View style={styles.orb}>
-              {isRecognizing ? (
-                <View style={styles.wave}>
-                  {[24, 46, 68, 38, 56].map((height, index) => (
-                    <View
-                      key={index}
-                      style={[styles.waveBar, { height }]}
-                    />
-                  ))}
-                </View>
-              ) : (
-                <ActivityIndicator color={colors.primary} size="large" />
-              )}
-            </View>
-          </View>
-        </View>
-
+        <Text style={styles.eyebrow}>LISTENING LIVE <Text style={styles.liveDot}>●</Text></Text>
         <Text style={styles.title}>
-          {phase === "suspected"
-            ? "Conversation slowing down"
-            : "You’re covered"}
+          {phase === "suspected" ? "Conversation slowing down" : "Ready to listen"}
         </Text>
-        <Text style={styles.subtitle}>
-          {visibleError
-            ? visibleError
-            : usesBackgroundService
-              ? backgroundStatus.recentText
-                ? `Heard recently: “${backgroundStatus.recentText}”\n${backgroundStatus.wordsHeard} words captured · checking every 10 words`
-                : "Listening for speech… Speak clearly near the phone microphone."
-              : detector.recentText
-              ? `Heard recently: “${detector.recentText}”`
-              : "Speak naturally. Your phone’s speech service creates the transcript."}
-        </Text>
+        <Text style={styles.subtitle}>{visibleError ?? "Alert: Mom / GF / Boss"}</Text>
+        <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
+        <Text style={styles.helper}>Keyword + situation check{"\n"}are active</Text>
 
         <View style={styles.progressCard}>
           <Text style={styles.progressLabel}>DETECTION CHECKS</Text>
@@ -237,16 +197,13 @@ export default function ListeningScreen() {
           accessibilityRole="button"
           disabled={Boolean(triggerReason)}
           onLongPress={triggerManually}
-          style={styles.panic}
+          style={styles.manual}
         >
-          <Text style={styles.panicTitle}>Hold for instant escape</Text>
-          <Text style={styles.panicBody}>Manual fallback</Text>
+          <Text style={styles.manualIcon}>♧</Text>
+          <Text style={styles.panicTitle}>Manual button</Text>
+          <Text style={styles.panicBody}>failsafe tap</Text>
         </Pressable>
-        <PrimaryButton
-          label="End session"
-          onPress={stopSession}
-          variant="secondary"
-        />
+        <Pressable onPress={stopSession} style={styles.manual}><Text style={styles.manualIcon}>□</Text><Text style={styles.panicTitle}>End session</Text><Text style={styles.panicBody}>stop listening</Text></Pressable>
       </View>
     </SafeAreaView>
   );
@@ -259,6 +216,8 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
+  eyebrow: { color: colors.primary, fontSize: 11, fontWeight: "800", letterSpacing: 1.4, marginTop: spacing.lg },
+  liveDot: { color: colors.primary, fontSize: 12 },
   statusRow: {
     alignItems: "center",
     alignSelf: "stretch",
@@ -298,17 +257,17 @@ const styles = StyleSheet.create({
     shadowRadius: 30,
     width: 166,
   },
-  wave: { alignItems: "center", flexDirection: "row", gap: 7 },
+  wave: { alignItems: "center", flexDirection: "row", gap: 4, marginTop: spacing.md },
   waveBar: {
-    backgroundColor: colors.primary,
+    backgroundColor: "#F1848B",
     borderRadius: radius.pill,
-    width: 8,
+    width: 3,
   },
   title: {
     color: colors.text,
     fontSize: 28,
     fontWeight: "800",
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     textAlign: "center",
   },
   subtitle: {
@@ -316,9 +275,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginTop: spacing.sm,
-    minHeight: 66,
+    minHeight: 28,
     textAlign: "center",
   },
+  helper: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: spacing.md, textAlign: "center" },
   progressCard: {
     alignSelf: "stretch",
     backgroundColor: colors.surface,
@@ -345,7 +305,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: spacing.sm,
   },
-  footer: { gap: spacing.md, padding: spacing.lg },
+  footer: { flexDirection: "row", gap: spacing.sm, padding: spacing.md },
+  manual: { alignItems: "center", borderColor: colors.border, borderRadius: 12, borderWidth: 1, flex: 1, minHeight: 80, justifyContent: "center" },
+  manualIcon: { color: colors.primary, fontSize: 21, marginBottom: 2 },
   panic: {
     alignItems: "center",
     borderColor: colors.primaryDark,
