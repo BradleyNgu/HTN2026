@@ -1,13 +1,16 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { TalkBlockHeader, TalkBlockNav } from "@/components/TalkBlockChrome";
+import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, spacing } from "@/theme";
 
 export default function ProfileScreen() {
   const { settings } = useSettings();
+  const [testCallStatus, setTestCallStatus] = useState("Test real phone call");
   const enabled = settings.situations.filter((item) => item.enabled).map((item) => item.title.toLowerCase()).join(" + ");
   const rows = [
     ["⌕", "Keyword ", settings.keywordSets.join(", "), "/keyword-sets"],
@@ -15,6 +18,16 @@ export default function ProfileScreen() {
     ["♧", "Default alert", settings.defaultAlert === "girlfriend" ? "girlfriend" : settings.defaultAlert, "/default-alert"],
     ["✓", "Ready to listen", "Listening is enabled", "/listening"],
   ] as const;
+
+  const testRealCall = async () => {
+    setTestCallStatus("Requesting Twilio call…");
+    try {
+      await triggerConfiguredPhoneCall("mom");
+      setTestCallStatus("Call requested");
+    } catch {
+      setTestCallStatus("Call failed — check Render");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -55,7 +68,7 @@ export default function ProfileScreen() {
             </Pressable>
           ))}
         </View>
-        <Pressable onPress={() => router.push("/incoming-call")} style={styles.alertRow}><Text style={styles.alertText}>Test escape call</Text></Pressable>
+        <Pressable onPress={() => void testRealCall()} style={styles.alertRow}><Text style={styles.alertText}>{testCallStatus}</Text></Pressable>
       </View>
       <TalkBlockNav />
     </SafeAreaView>

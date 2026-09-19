@@ -1,7 +1,7 @@
 # Conversation Escape
 
-An iOS/Android app that notices when a conversation has stalled and opens a
-configurable, call-style interruption. Android can continue listening from a
+An iOS/Android app that notices when a conversation has stalled and asks Twilio
+to place a real phone call. Android can continue listening from a
 microphone foreground service while the phone is on Home or locked; iOS remains
 foreground-only. Speech recognition prefers the phone's offline service and
 falls back to its online service when necessary. Only short text windows are
@@ -11,25 +11,21 @@ sent to that classifier.
 ## What works
 
 - Offline-first English speech recognition with an Android online fallback
-- A 50-word rolling window evaluated every 20 new words
+- A 10-word transcript window evaluated every 10 new words
 - Two-result confidence gate, sensitivity settings, stale-response handling,
   and a two-minute cooldown
 - Immediate local triggers for AI, big data, blockchain, web3, and physical
   intelligence
-- Add, edit, delete, and select custom callers
-- Import a caller MP3 from Android storage, preview it, and play it after
-  accepting the simulated call
-- Call delay controls, a hold-to-trigger manual fallback, vibration, playback
-  progress, and a spoken fallback when no MP3 is available
+- Mom, Boss, and Girlfriend call audio choices routed through Twilio
+- Call delay controls and a hold-to-trigger manual fallback
 - Memory-only transcripts and locally stored, transcript-free feedback
 - Rate-limited model proxy with structured output and no transcript logging
-- Android background listening with a permanent notification, notification
-  Stop/Open actions, and a high-priority simulated-call handoff
+- Android background listening with a permanent notification and Stop/Open
+  actions
 
 The app intentionally does not imitate tornado, government, or other official
-emergency alerts. The messaging-style incoming call is an in-app simulation,
-not a real WhatsApp, CallKit, or Android Telecom call. WhatsApp does not expose
-a public API that lets third-party apps automatically place incoming calls.
+emergency alerts. Calls are ordinary Twilio phone calls, not WhatsApp, CallKit,
+or Android Telecom simulations.
 
 ## Requirements
 
@@ -112,19 +108,36 @@ direct test distribution only. Use a private release keystore before publishing
 through Google Play. Never place `OPENAI_API_KEY` in an `EXPO_PUBLIC_` variable;
 only the Render service should hold it.
 
+### Twilio real calls
+
+Configure these server-only Render variables in addition to the OpenAI key:
+
+```env
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+15555550123
+TWILIO_RECIPIENT_MOM=+15555550124
+```
+
+After the existing two-positive or keyword trigger, the app sends only the
+selected Mom/Boss/Girlfriend audio type to `/call`. During testing, every type
+calls the single fixed `TWILIO_RECIPIENT_MOM` number. Arbitrary destination
+numbers are rejected, and the endpoint is rate-limited. Twilio trial accounts
+can call only verified recipient numbers. The Tornado option does not place a
+call.
+
 ## Demo flow
 
 1. Complete the privacy notice.
-2. Add or edit a caller and choose an MP3 up to 25 MB from phone storage.
-3. Preview the MP3, save the caller, then select sensitivity and delay.
+2. Select the desired Twilio call audio and detection settings.
+3. Confirm the test recipient is verified in Twilio.
 4. Start listening and grant microphone and notification permissions.
-5. Speak at least 70 words so two overlapping windows can be evaluated.
+5. Speak at least 20 words so two 10-word windows can be evaluated.
 6. On Android, press Home or lock the phone and confirm the persistent
    “Conversation Escape is listening” notification remains.
 7. Wait for two positive checks, use a keyword, or hold the manual escape
    control.
-8. Tap the high-priority notification, then accept the simulated call to hear
-   the caller MP3.
+8. Answer the real Twilio call on the configured test phone.
 
 Install an offline English speech model for maximum privacy and responsiveness.
 If Samsung or another Android device rejects the offline service or locale, the
@@ -154,8 +167,6 @@ restart itself after a force-stop or reboot.
   may process audio online when its offline recognizer is unavailable.
 - Background recognition and cloud classification can increase battery and
   mobile-data use. Stop from the app or the ongoing notification.
-- Imported MP3s are copied into app-owned storage, never uploaded, and removed
-  when their caller is deleted or the file is replaced.
 - Transcript text exists in memory, is capped at 120 words, and is cleared
   when a session ends or triggers.
 - The server validates snippets, limits requests, disables response caching,
@@ -179,11 +190,11 @@ cd android && ./gradlew :background-listener:test :app:assembleRelease \
   -PreactNativeArchitectures=arm64-v8a
 ```
 
-Unit and API tests cover settings migration, caller deletion, MP3 validation,
-missing-file fallback, media cleanup, rolling-window overlap, transcript
+Unit and API tests cover settings migration, caller deletion, Twilio request
+validation, rolling-window overlap, transcript
 clearing, consecutive classifications, stale responses, cooldowns, request
-validation, and provider error redaction. File picking, microphone permissions,
-vibration, speech recognition, and MP3 playback still require physical-device
+validation, and provider error redaction. Microphone permissions,
+speech recognition, and real phone calls still require physical-device
 testing. Background verification should cover Home, screen lock, notification
 Stop/Open, network loss and recovery, Render cold starts, permission denial,
 force-stop, and Samsung battery optimization.

@@ -55,6 +55,7 @@ describe("background listener bridge", () => {
       triggerDelaySeconds: 2,
       apiUrl: "https://example.test",
       locale: "en-US",
+      callType: "mom" as const,
     };
     expect(startBackgroundListening(options)).toEqual(listeningStatus);
     expect(native.start).toHaveBeenCalledWith(options);

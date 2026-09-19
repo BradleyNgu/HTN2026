@@ -2,6 +2,7 @@ import { router, usePathname } from "expo-router";
 import React from "react";
 import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, isDarkMode, spacing } from "@/theme";
 
@@ -35,7 +36,7 @@ export function TalkBlockHeader({ title }: { title?: string }) {
               style={styles.themeImage}
             />
           </Pressable>
-          <Pressable accessibilityLabel="Call now" onPress={() => router.push("/incoming-call")} style={styles.helpButton}>
+          <Pressable accessibilityLabel="Call now" onPress={() => void triggerConfiguredPhoneCall("mom").catch(() => undefined)} style={styles.helpButton}>
             <Image
               accessibilityLabel="Call now"
               source={isDarkMode

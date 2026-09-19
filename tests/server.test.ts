@@ -51,4 +51,27 @@ describe("classification API", () => {
       error: "Classification is temporarily unavailable",
     });
   });
+
+  it("places a configured call without accepting a destination number", async () => {
+    const classifier = vi.fn();
+    const phoneCaller = vi.fn().mockResolvedValue("CA123");
+    const response = await request(createApp(classifier, phoneCaller))
+      .post("/call")
+      .send({ callType: "mom" });
+
+    expect(response.status).toBe(202);
+    expect(response.body).toEqual({ ok: true });
+    expect(phoneCaller).toHaveBeenCalledWith("mom");
+  });
+
+  it("rejects arbitrary phone numbers and unsupported call types", async () => {
+    const classifier = vi.fn();
+    const phoneCaller = vi.fn();
+    const response = await request(createApp(classifier, phoneCaller))
+      .post("/call")
+      .send({ callType: "other", phoneNumber: "+14155552671" });
+
+    expect(response.status).toBe(400);
+    expect(phoneCaller).not.toHaveBeenCalled();
+  });
 });
