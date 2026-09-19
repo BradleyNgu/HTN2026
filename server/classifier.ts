@@ -11,7 +11,12 @@ import {
 
 const SYSTEM_PROMPT = `You classify whether a casual in-person conversation has become boring enough that a participant might reasonably want a graceful exit.
 
-Mark boring=true only when the excerpt shows clear low engagement: repetitive small talk, stalled exchanges, perfunctory replies, repeated topics, or a prolonged one-sided monologue. A neutral excerpt is not automatically boring.
+Mark boring=true when the excerpt includes any of these patterns:
+- Someone is pitching, selling, or repeatedly promoting an idea, product, startup, project, business opportunity, or proposal.
+- A speaker keeps repeating the same point, explanation, story, claim, or question without adding meaningful information.
+- The exchange is repetitive small talk, stalled conversation, perfunctory replies, repeated topics, or a prolonged one-sided monologue.
+
+Treat a clear pitch or repetitive speech as sufficient even if the listener's reaction is not included. A neutral, balanced discussion is not automatically boring.
 
 Safety rules:
 - Always return boring=false for distress, conflict, threats, harassment, medical, legal, or safety-sensitive situations.
