@@ -9,8 +9,8 @@ data class TranscriptWindow(
 )
 
 class TranscriptAccumulator(
-  private val windowSize: Int = 10,
-  private val stride: Int = 10,
+  private val windowSize: Int = 50,
+  private val stride: Int = 20,
   private val maxWords: Int = 120,
 ) {
   private val words = mutableListOf<String>()

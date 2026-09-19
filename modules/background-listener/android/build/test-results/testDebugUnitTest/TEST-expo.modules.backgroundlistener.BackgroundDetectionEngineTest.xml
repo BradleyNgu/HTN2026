@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-09-19T18:33:08.417Z" hostname="eduroam-campus-10-36-222-143.campus-dynamic.uwaterloo.ca" time="0.035">
+<testsuite name="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-09-19T17:54:06.629Z" hostname="eduroam-campus-10-36-222-143.campus-dynamic.uwaterloo.ca" time="0.06">
   <properties/>
-  <testcase name="keyword matching respects word boundaries and flexible spaces()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.018"/>
-  <testcase name="rolling transcript emits every 10 words()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.01"/>
-  <testcase name="gate requires two confident positives()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.001"/>
+  <testcase name="keyword matching respects word boundaries and flexible spaces()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.028"/>
+  <testcase name="rolling transcript emits 50 words then advances by 20()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.018"/>
+  <testcase name="gate requires two confident positives()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.002"/>
   <testcase name="service cleanup releases each resource once()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.001"/>
   <testcase name="gate ignores stale response ordering and enforces cooldown()" classname="expo.modules.backgroundlistener.BackgroundDetectionEngineTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>

@@ -19,8 +19,8 @@ export class RollingTranscriptBuffer {
   private readonly maxWords: number;
 
   constructor(options: RollingTranscriptOptions = {}) {
-    this.windowSize = options.windowSize ?? 10;
-    this.stride = options.stride ?? 10;
+    this.windowSize = options.windowSize ?? 50;
+    this.stride = options.stride ?? 20;
     this.maxWords = options.maxWords ?? 120;
   }
 

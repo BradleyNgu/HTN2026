@@ -11,7 +11,7 @@ sent to that classifier.
 ## What works
 
 - Offline-first English speech recognition with an Android online fallback
-- A 10-word transcript window evaluated every 10 new words
+- A 50-word rolling window evaluated every 20 new words
 - Two-result confidence gate, sensitivity settings, stale-response handling,
   and a two-minute cooldown
 - Immediate local triggers for AI, big data, blockchain, web3, and physical
@@ -118,7 +118,7 @@ only the Render service should hold it.
 2. Add or edit a caller and choose an MP3 up to 25 MB from phone storage.
 3. Preview the MP3, save the caller, then select sensitivity and delay.
 4. Start listening and grant microphone and notification permissions.
-5. Speak at least 20 words so two transcript windows can be evaluated.
+5. Speak at least 70 words so two overlapping windows can be evaluated.
 6. On Android, press Home or lock the phone and confirm the persistent
    “Conversation Escape is listening” notification remains.
 7. Wait for two positive checks, use a keyword, or hold the manual escape
