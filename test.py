@@ -1,4 +1,4 @@
 import interruptions
-import api_keys
+from api_keys import TEST_PHONE_NUMBER
 
-interruptions.phone_call(interruptions.PhoneCallType.MOM, TEST_PHONE_NUMBER)
+interruptions.phone_call(interruptions.PhoneCallType.GIRLFRIEND, TEST_PHONE_NUMBER)

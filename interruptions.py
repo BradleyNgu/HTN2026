@@ -41,7 +41,7 @@ def _validate_e164(phone_number: str, *, parameter_name: str) -> None:
 def phone_call(phone_call_type: PhoneCallType, phone_number: str) -> str:
     """Call ``phone_number`` and play audio chosen by ``phone_call_type``.
 
-    Returns the Twilio call SID. The selected audio is fetched from GitHub.
+    Returns the Twilio call SID. Twilio fetches the selected MP3 from GitHub.
     """
     if not isinstance(phone_call_type, PhoneCallType):
         raise TypeError("phone_call_type must be a PhoneCallType enum value.")
