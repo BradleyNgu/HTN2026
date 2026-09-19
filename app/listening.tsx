@@ -171,7 +171,12 @@ export default function ListeningScreen() {
         <View style={styles.transcript}>
           <Text style={styles.transcriptLabel}>TRANSCRIPT</Text>
           <Text style={styles.transcriptText}>
-            {detector.partialTranscript || detector.recentText || "Listening for speech..."}
+            {usesBackgroundService
+              ? backgroundStatus.recentText ||
+                `Listening for speech… ${backgroundStatus.wordsHeard} words captured`
+              : detector.partialTranscript ||
+                detector.recentText ||
+                "Listening for speech..."}
           </Text>
         </View>
 
