@@ -34,6 +34,8 @@ const listeningStatus: BackgroundListenerStatus = {
   active: true,
   phase: "listening" as const,
   startedAt: 100,
+  wordsHeard: 12,
+  recentText: "the latest recognized words",
   lastError: null,
 };
 

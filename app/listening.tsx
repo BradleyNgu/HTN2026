@@ -199,7 +199,9 @@ export default function ListeningScreen() {
           {visibleError
             ? visibleError
             : usesBackgroundService
-              ? "Android shows a permanent notification while the microphone is active. You can leave or lock the phone."
+              ? backgroundStatus.recentText
+                ? `Heard recently: “${backgroundStatus.recentText}”\n${backgroundStatus.wordsHeard} words captured · checking every 10 words`
+                : "Listening for speech… Speak clearly near the phone microphone."
               : detector.recentText
               ? `Heard recently: “${detector.recentText}”`
               : "Speak naturally. Your phone’s speech service creates the transcript."}

@@ -19,6 +19,8 @@ export type BackgroundListenerStatus = {
     | "triggered"
     | "error";
   startedAt: number;
+  wordsHeard: number;
+  recentText: string;
   lastError: string | null;
 };
 

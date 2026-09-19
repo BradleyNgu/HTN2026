@@ -28,12 +28,16 @@ data class ListenerStatus(
   val active: Boolean = false,
   val phase: String = "idle",
   val startedAt: Long = 0,
+  val wordsHeard: Int = 0,
+  val recentText: String = "",
   val lastError: String? = null,
 ) {
   fun toMap(): Map<String, Any?> = mapOf(
     "active" to active,
     "phase" to phase,
     "startedAt" to startedAt,
+    "wordsHeard" to wordsHeard,
+    "recentText" to recentText,
     "lastError" to lastError,
   )
 }
