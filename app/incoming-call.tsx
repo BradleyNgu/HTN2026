@@ -16,12 +16,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { consumePendingBackgroundTrigger } from "@/features/background/backgroundListener";
+import {
+  getTriggerCaller,
+  normalizeTriggerRouteParams,
+} from "@/features/background/triggerHandoff";
 import { managedAudioExists } from "@/features/escape/audioStorage";
 import {
   cleanupCallMedia,
   resolveCallAudio,
 } from "@/features/escape/callAudio";
-import { getSelectedCaller } from "@/features/escape/callerProfiles";
 import { recordTriggerFeedback } from "@/features/escape/feedbackStore";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, radius, spacing } from "@/theme";
@@ -35,8 +39,12 @@ function formatTime(seconds: number) {
 
 export default function IncomingCallScreen() {
   const { settings } = useSettings();
-  const { reason } = useLocalSearchParams<{ reason?: string }>();
-  const caller = getSelectedCaller(settings);
+  const routeParams = useLocalSearchParams<{
+    reason?: string | string[];
+    callerId?: string | string[];
+  }>();
+  const { reason, callerId } = normalizeTriggerRouteParams(routeParams);
+  const caller = getTriggerCaller(settings, callerId);
   const resolvedAudio = caller
     ? resolveCallAudio(caller, (candidate) =>
         managedAudioExists(candidate.audio),
@@ -52,6 +60,7 @@ export default function IncomingCallScreen() {
   const ringTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    consumePendingBackgroundTrigger();
     void setAudioModeAsync({
       playsInSilentMode: true,
       interruptionMode: "doNotMix",

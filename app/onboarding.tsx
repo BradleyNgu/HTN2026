@@ -9,7 +9,14 @@ import { colors, radius, spacing } from "@/theme";
 const promises = [
   ["Offline first", "The app prefers your phone’s offline speech model."],
   ["Transparent fallback", "Android may process speech online; our API receives only text."],
-  ["You stay in control", "Listening runs only while this screen is active."],
+  [
+    "Visible background use",
+    "On Android, listening can continue on Home or while locked. A permanent notification is always shown.",
+  ],
+  [
+    "You stay in control",
+    "Stop from the app or notification at any time. Force-stopping the app also ends listening.",
+  ],
 ];
 
 export default function OnboardingScreen() {
@@ -45,7 +52,8 @@ export default function OnboardingScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.consent}>
-          Everyone nearby should know when speech recognition is active.
+          Persistent listening uses battery and data. Everyone nearby should
+          know when speech recognition is active.
         </Text>
         <PrimaryButton label="I understand — continue" onPress={finish} />
       </View>

@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { stopBackgroundListening } from "@/features/background/backgroundListener";
+import { useBackgroundListenerStatus } from "@/features/background/useBackgroundListenerStatus";
 import {
   getSelectedCaller,
 } from "@/features/escape/callerProfiles";
@@ -22,6 +25,9 @@ const sensitivityOptions: Sensitivity[] = ["low", "medium", "high"];
 
 export default function HomeScreen() {
   const { settings, isHydrated, updateSettings } = useSettings();
+  const backgroundStatus = useBackgroundListenerStatus();
+  const isBackgroundActive =
+    Platform.OS === "android" && backgroundStatus.active;
 
   useEffect(() => {
     if (isHydrated && !settings.hasCompletedOnboarding) {
@@ -50,6 +56,25 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>
           Choose a caller and attach a prerecorded MP3 for after you answer.
         </Text>
+
+        {isBackgroundActive ? (
+          <View style={styles.activeSession}>
+            <View style={styles.activeDot} />
+            <View style={styles.activeCopy}>
+              <Text style={styles.activeTitle}>Background listening is active</Text>
+              <Text style={styles.activeBody}>
+                It continues on Home and while the phone is locked.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={stopBackgroundListening}
+              style={styles.stopButton}
+            >
+              <Text style={styles.stopText}>Stop</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Your callers</Text>
@@ -176,10 +201,14 @@ export default function HomeScreen() {
         <PrimaryButton
           disabled={!selected}
           label={
-            selected ? `Start listening as ${selected.name}` : "Add a caller"
+            isBackgroundActive
+              ? "View listening session"
+              : selected
+                ? `Start listening as ${selected.name}`
+                : "Add a caller"
           }
           onPress={() =>
-            selected
+            selected || isBackgroundActive
               ? router.push("/listening")
               : router.push("/caller-editor")
           }
@@ -217,6 +246,33 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: spacing.sm,
   },
+  activeSession: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.success,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginTop: spacing.lg,
+    padding: spacing.md,
+  },
+  activeDot: {
+    backgroundColor: colors.success,
+    borderRadius: radius.pill,
+    height: 10,
+    width: 10,
+  },
+  activeCopy: { flex: 1, marginLeft: spacing.sm },
+  activeTitle: { color: colors.text, fontSize: 14, fontWeight: "700" },
+  activeBody: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  stopButton: {
+    borderColor: colors.danger,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  stopText: { color: colors.danger, fontSize: 13, fontWeight: "700" },
   sectionHeader: {
     alignItems: "center",
     flexDirection: "row",

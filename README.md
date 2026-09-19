@@ -1,10 +1,12 @@
 # Conversation Escape
 
-A foreground iOS/Android app that notices when a conversation has stalled and
-opens a configurable, call-style interruption. Speech recognition prefers the
-phone's offline service and falls back to its online service when necessary.
-Only short text windows are sent to the app's server-side AI classifier; raw
-audio is never persisted or sent to that classifier.
+An iOS/Android app that notices when a conversation has stalled and opens a
+configurable, call-style interruption. Android can continue listening from a
+microphone foreground service while the phone is on Home or locked; iOS remains
+foreground-only. Speech recognition prefers the phone's offline service and
+falls back to its online service when necessary. Only short text windows are
+sent to the app's server-side AI classifier; raw audio is never persisted or
+sent to that classifier.
 
 ## What works
 
@@ -21,6 +23,8 @@ audio is never persisted or sent to that classifier.
   progress, and a spoken fallback when no MP3 is available
 - Memory-only transcripts and locally stored, transcript-free feedback
 - Rate-limited model proxy with structured output and no transcript logging
+- Android background listening with a permanent notification, notification
+  Stop/Open actions, and a high-priority simulated-call handoff
 
 The app intentionally does not imitate tornado, government, or other official
 emergency alerts. The messaging-style incoming call is an in-app simulation,
@@ -69,6 +73,9 @@ npm run android
 ```
 
 After the first native build, use `npm run start` for normal Metro development.
+Changes under `modules/background-listener/`, the config plugin, permissions, or
+notification channels require a new native build; Fast Refresh cannot install
+them.
 
 ## Independent Android APK
 
@@ -90,7 +97,7 @@ installed. It still needs internet access for OpenAI classification.
 
    ```bash
    cd android
-   ./gradlew assembleRelease
+   ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
    cd ..
    ```
 
@@ -110,21 +117,43 @@ only the Render service should hold it.
 1. Complete the privacy notice.
 2. Add or edit a caller and choose an MP3 up to 25 MB from phone storage.
 3. Preview the MP3, save the caller, then select sensitivity and delay.
-4. Start listening and grant microphone/speech permissions.
+4. Start listening and grant microphone and notification permissions.
 5. Speak at least 70 words so two overlapping windows can be evaluated.
-6. Wait for two positive checks, or hold the manual escape control.
-7. Accept the simulated call to hear the caller MP3.
+6. On Android, press Home or lock the phone and confirm the persistent
+   “Conversation Escape is listening” notification remains.
+7. Wait for two positive checks, use a keyword, or hold the manual escape
+   control.
+8. Tap the high-priority notification, then accept the simulated call to hear
+   the caller MP3.
 
 Install an offline English speech model for maximum privacy and responsiveness.
 If Samsung or another Android device rejects the offline service or locale, the
 app retries through the phone's online speech service. Android 12 and older may
 not support continuous recognition through every selected speech service.
 
+### Samsung background settings
+
+On a Samsung S21, open **Settings → Apps → Conversation Escape → Battery** and
+choose **Unrestricted** for the most reliable locked-screen behavior. Also
+remove the app from **Battery and device care → Battery → Background usage
+limits → Sleeping apps**. Android or One UI may still stop microphone work
+under memory, thermal, or vendor power pressure; return to the app and start a
+new session if the persistent notification disappears.
+
+The service starts only from the visible listening screen. Swiping the UI away
+does not intentionally end it, but tapping Stop, revoking microphone permission,
+restarting the phone, or force-stopping the app ends listening. It does not
+restart itself after a force-stop or reboot.
+
 ## Privacy and safety
 
-- Recognition is foreground-only and starts only after an explicit tap.
+- Recognition starts only after an explicit tap. Android can keep the
+  microphone active on Home or while locked and always shows an ongoing system
+  notification; iOS recognition is foreground-only.
 - The recognizer is configured not to persist audio. Android's speech service
   may process audio online when its offline recognizer is unavailable.
+- Background recognition and cloud classification can increase battery and
+  mobile-data use. Stop from the app or the ongoing notification.
 - Imported MP3s are copied into app-owned storage, never uploaded, and removed
   when their caller is deleted or the file is replaced.
 - Transcript text exists in memory, is capped at 120 words, and is cleared
@@ -146,6 +175,8 @@ bodies, a deletion policy, and jurisdiction-specific consent review.
 npm test
 npm run typecheck
 npm run doctor
+cd android && ./gradlew :background-listener:test :app:assembleRelease \
+  -PreactNativeArchitectures=arm64-v8a
 ```
 
 Unit and API tests cover settings migration, caller deletion, MP3 validation,
@@ -153,4 +184,6 @@ missing-file fallback, media cleanup, rolling-window overlap, transcript
 clearing, consecutive classifications, stale responses, cooldowns, request
 validation, and provider error redaction. File picking, microphone permissions,
 vibration, speech recognition, and MP3 playback still require physical-device
-testing.
+testing. Background verification should cover Home, screen lock, notification
+Stop/Open, network loss and recovery, Render cold starts, permission denial,
+force-stop, and Samsung battery optimization.

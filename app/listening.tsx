@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
+import {
+  getBackgroundListeningStatus,
+  isBackgroundListeningSupported,
+  requestBackgroundListeningPermissions,
+  startBackgroundListening,
+  stopBackgroundListening,
+} from "@/features/background/backgroundListener";
+import { useBackgroundListenerStatus } from "@/features/background/useBackgroundListenerStatus";
 import { getSelectedCaller } from "@/features/escape/callerProfiles";
 import { useConversationDetector } from "@/features/listening/useConversationDetector";
 import { useSettings } from "@/store/SettingsContext";
@@ -28,9 +37,13 @@ const phaseLabels = {
 export default function ListeningScreen() {
   const { settings } = useSettings();
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const caller = getSelectedCaller(settings);
+  const backgroundStatus = useBackgroundListenerStatus();
+  const usesBackgroundService =
+    Platform.OS === "android" && isBackgroundListeningSupported;
 
   const handleTrigger = useCallback(
     (reason: string) => {
@@ -53,21 +66,92 @@ export default function ListeningScreen() {
     onTrigger: handleTrigger,
   });
 
+  const startSession = useCallback(async () => {
+    if (!caller) return false;
+    if (!usesBackgroundService) return detector.start();
+    if (getBackgroundListeningStatus().active) return true;
+    setBackgroundError(null);
+    const granted = await requestBackgroundListeningPermissions();
+    if (!granted) {
+      setBackgroundError(
+        "Microphone and notification permissions are required for background listening.",
+      );
+      return false;
+    }
+    try {
+      startBackgroundListening({
+        callerId: caller.id,
+        callerName: caller.name,
+        callerRelationship: caller.relationship,
+        sensitivity: settings.sensitivity,
+        triggerDelaySeconds: settings.triggerDelaySeconds,
+        apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
+        locale: "en-US",
+      });
+      return true;
+    } catch (error) {
+      setBackgroundError(
+        error instanceof Error ? error.message : "Background listening failed.",
+      );
+      return false;
+    }
+  }, [
+    caller,
+    detector,
+    settings.sensitivity,
+    settings.triggerDelaySeconds,
+    usesBackgroundService,
+  ]);
+
   useEffect(() => {
     if (!started.current) {
       started.current = true;
-      if (caller) void detector.start();
+      if (caller) void startSession();
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // The detector owns teardown; this effect intentionally starts once.
+    // Android intentionally keeps its native service alive after this screen unmounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopSession = () => {
-    detector.stop();
+    if (usesBackgroundService) {
+      stopBackgroundListening();
+    } else {
+      detector.stop();
+    }
     router.back();
+  };
+
+  const phase = usesBackgroundService
+    ? backgroundStatus.phase
+    : detector.phase;
+  const isRecognizing = usesBackgroundService
+    ? backgroundStatus.active
+    : detector.isRecognizing;
+  const visibleError = usesBackgroundService
+    ? backgroundError ?? backgroundStatus.lastError
+    : detector.error;
+  const statusLabel = usesBackgroundService
+    ? backgroundStatus.phase === "triggered"
+      ? "Escape ready — open the notification"
+      : backgroundStatus.phase === "reconnecting"
+        ? "Reconnecting speech recognition"
+        : backgroundStatus.phase === "evaluating"
+          ? "Checking the latest moment"
+          : backgroundStatus.active
+            ? "Listening continues when locked or on Home"
+            : "Starting background listening…"
+    : phaseLabels[detector.phase];
+
+  const triggerManually = () => {
+    if (usesBackgroundService) {
+      stopBackgroundListening();
+      handleTrigger("Manual escape requested");
+    } else {
+      detector.triggerManually();
+    }
   };
 
   return (
@@ -77,20 +161,20 @@ export default function ListeningScreen() {
           <View
             style={[
               styles.statusDot,
-              detector.isRecognizing && styles.statusDotActive,
+              isRecognizing && styles.statusDotActive,
             ]}
           />
           <Text style={styles.statusText}>
             {triggerReason
               ? `Calling ${caller?.name ?? "your caller"}…`
-              : phaseLabels[detector.phase]}
+              : statusLabel}
           </Text>
         </View>
 
         <View style={styles.orbWrap}>
           <View style={styles.orbOuter}>
             <View style={styles.orb}>
-              {detector.isRecognizing ? (
+              {isRecognizing ? (
                 <View style={styles.wave}>
                   {[24, 46, 68, 38, 56].map((height, index) => (
                     <View
@@ -107,14 +191,16 @@ export default function ListeningScreen() {
         </View>
 
         <Text style={styles.title}>
-          {detector.phase === "suspected"
+          {phase === "suspected"
             ? "Conversation slowing down"
             : "You’re covered"}
         </Text>
         <Text style={styles.subtitle}>
-          {detector.error
-            ? detector.error
-            : detector.recentText
+          {visibleError
+            ? visibleError
+            : usesBackgroundService
+              ? "Android shows a permanent notification while the microphone is active. You can leave or lock the phone."
+              : detector.recentText
               ? `Heard recently: “${detector.recentText}”`
               : "Speak naturally. Your phone’s speech service creates the transcript."}
         </Text>
@@ -138,8 +224,8 @@ export default function ListeningScreen() {
           </Text>
         </View>
 
-        {detector.error && detector.phase === "idle" ? (
-          <PrimaryButton label="Try again" onPress={() => void detector.start()} />
+        {visibleError && !isRecognizing ? (
+          <PrimaryButton label="Try again" onPress={() => void startSession()} />
         ) : null}
       </View>
 
@@ -148,7 +234,7 @@ export default function ListeningScreen() {
           accessibilityLabel="Trigger escape now"
           accessibilityRole="button"
           disabled={Boolean(triggerReason)}
-          onLongPress={detector.triggerManually}
+          onLongPress={triggerManually}
           style={styles.panic}
         >
           <Text style={styles.panicTitle}>Hold for instant escape</Text>

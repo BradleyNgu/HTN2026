@@ -18,6 +18,10 @@
       "package": "com.htn2026.conversationescape",
       "permissions": [
         "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK",
         "VIBRATE"
       ]
     },
@@ -31,7 +35,8 @@
         }
       ],
       "expo-status-bar",
-      "expo-audio"
+      "expo-audio",
+      "./plugins/with-background-listener.cjs"
     ],
     "experiments": {
       "typedRoutes": true
