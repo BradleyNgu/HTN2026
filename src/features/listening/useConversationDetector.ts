@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  findTriggerKeyword,
+  keywordTriggerReason,
+} from "@/shared/triggerKeywords";
 import { Classification, Sensitivity } from "@/types";
 import { classifyTranscript } from "./classifierClient";
 import {
@@ -37,6 +41,18 @@ export function useConversationDetector({
     controllers.current.forEach((controller) => controller.abort());
     controllers.current.clear();
   }, []);
+
+  const triggerImmediately = useCallback(
+    (reason: string) => {
+      abortSpeech.current();
+      cancelRequests();
+      buffer.current.clear();
+      setRecentText("");
+      setSnapshot(machine.current.triggerManually());
+      triggerCallback.current(reason);
+    },
+    [cancelRequests],
+  );
 
   const handleClassification = useCallback(
     (windowId: number, result: Classification) => {
@@ -82,12 +98,18 @@ export function useConversationDetector({
   const handleWords = useCallback(
     (text: string) => {
       const nextWindow = buffer.current.add(text);
-      setRecentText(buffer.current.getRecentText());
+      const recent = buffer.current.getRecentText();
+      setRecentText(recent);
+      const triggerKeyword = findTriggerKeyword(recent);
+      if (triggerKeyword) {
+        triggerImmediately(keywordTriggerReason(triggerKeyword));
+        return;
+      }
       if (nextWindow) {
         void evaluate(nextWindow.id, nextWindow.text);
       }
     },
-    [evaluate],
+    [evaluate, triggerImmediately],
   );
 
   const speech = useSpeechTranscription({ onWords: handleWords });
@@ -113,13 +135,8 @@ export function useConversationDetector({
   }, [cancelRequests, speech]);
 
   const triggerManually = useCallback(() => {
-    cancelRequests();
-    speech.abort();
-    buffer.current.clear();
-    setRecentText("");
-    setSnapshot(machine.current.triggerManually());
-    triggerCallback.current("Manual escape requested");
-  }, [cancelRequests, speech]);
+    triggerImmediately("Manual escape requested");
+  }, [triggerImmediately]);
 
   useEffect(
     () => () => {

@@ -116,7 +116,7 @@ export default function ListeningScreen() {
             ? detector.error
             : detector.recentText
               ? `Heard recently: “${detector.recentText}”`
-              : "Speak naturally. Audio stays on this device."}
+              : "Speak naturally. Your phone’s speech service creates the transcript."}
         </Text>
 
         <View style={styles.progressCard}>

@@ -4,6 +4,10 @@ import {
   ClassificationResult,
   classificationSchema,
 } from "./schema";
+import {
+  findTriggerKeyword,
+  keywordTriggerReason,
+} from "../src/shared/triggerKeywords";
 
 const SYSTEM_PROMPT = `You classify whether a casual in-person conversation has become boring enough that a participant might reasonably want a graceful exit.
 
@@ -19,6 +23,15 @@ Return only JSON matching the supplied schema.`;
 export type Classifier = (text: string) => Promise<ClassificationResult>;
 
 export const classifyConversation: Classifier = async (text) => {
+  const triggerKeyword = findTriggerKeyword(text);
+  if (triggerKeyword) {
+    return {
+      boring: true,
+      confidence: 1,
+      reason: keywordTriggerReason(triggerKeyword),
+    };
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not configured");
   }

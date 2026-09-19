@@ -1,16 +1,19 @@
 # Conversation Escape
 
 A foreground iOS/Android app that notices when a conversation has stalled and
-opens a configurable, call-style interruption. Speech recognition runs on the
-device. Only short text windows are sent to a server-side AI classifier; raw
-audio is never recorded or uploaded.
+opens a configurable, call-style interruption. Speech recognition prefers the
+phone's offline service and falls back to its online service when necessary.
+Only short text windows are sent to the app's server-side AI classifier; raw
+audio is never persisted or sent to that classifier.
 
 ## What works
 
-- On-device, continuous English speech recognition
+- Offline-first English speech recognition with an Android online fallback
 - A 50-word rolling window evaluated every 20 new words
 - Two-result confidence gate, sensitivity settings, stale-response handling,
   and a two-minute cooldown
+- Immediate local triggers for AI, big data, blockchain, web3, and physical
+  intelligence
 - Add, edit, delete, and select custom callers
 - Import a caller MP3 from Android storage, preview it, and play it after
   accepting the simulated call
@@ -27,7 +30,7 @@ a public API that lets third-party apps automatically place incoming calls.
 ## Requirements
 
 - Node.js 22+
-- A physical iOS or Android device with offline English speech recognition
+- A physical iOS or Android device with speech recognition
 - Xcode or Android Studio for a native Expo development build
 - An OpenAI API key
 
@@ -112,15 +115,16 @@ only the Render service should hold it.
 6. Wait for two positive checks, or hold the manual escape control.
 7. Accept the simulated call to hear the caller MP3.
 
-If the device reports that on-device recognition is unavailable, install an
-offline English speech model in the operating system settings. Android 12 and
-older may not support continuous on-device recognition through the selected
-speech service.
+Install an offline English speech model for maximum privacy and responsiveness.
+If Samsung or another Android device rejects the offline service or locale, the
+app retries through the phone's online speech service. Android 12 and older may
+not support continuous recognition through every selected speech service.
 
 ## Privacy and safety
 
 - Recognition is foreground-only and starts only after an explicit tap.
-- The recognizer is configured not to persist audio.
+- The recognizer is configured not to persist audio. Android's speech service
+  may process audio online when its offline recognizer is unavailable.
 - Imported MP3s are copied into app-owned storage, never uploaded, and removed
   when their caller is deleted or the file is replaced.
 - Transcript text exists in memory, is capped at 120 words, and is cleared

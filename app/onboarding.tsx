@@ -7,8 +7,8 @@ import { useSettings } from "@/store/SettingsContext";
 import { colors, radius, spacing } from "@/theme";
 
 const promises = [
-  ["On-device first", "Speech becomes text on your phone."],
-  ["No audio uploads", "Only short transcript windows reach the classifier."],
+  ["Offline first", "The app prefers your phone’s offline speech model."],
+  ["Transparent fallback", "Android may process speech online; our API receives only text."],
   ["You stay in control", "Listening runs only while this screen is active."],
 ];
 

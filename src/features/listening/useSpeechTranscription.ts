@@ -39,6 +39,7 @@ export function useSpeechTranscription({ onWords }: Options) {
   const [error, setError] = useState<string | null>(null);
   const previousTranscript = useRef("");
   const wantsRecognition = useRef(false);
+  const usesOnlineFallback = useRef(false);
 
   const beginNativeRecognition = useCallback(() => {
     previousTranscript.current = "";
@@ -47,7 +48,7 @@ export function useSpeechTranscription({ onWords }: Options) {
       interimResults: true,
       continuous: true,
       maxAlternatives: 1,
-      requiresOnDeviceRecognition: true,
+      requiresOnDeviceRecognition: !usesOnlineFallback.current,
       addsPunctuation: true,
       recordingOptions: { persist: false },
       volumeChangeEventOptions: { enabled: true, intervalMillis: 400 },
@@ -72,6 +73,29 @@ export function useSpeechTranscription({ onWords }: Options) {
   useSpeechRecognitionEvent("error", (event) => {
     const expectedSilence =
       event.error === "no-speech" || event.error === "speech-timeout";
+    const offlineUnavailable =
+      event.error === "language-not-supported" ||
+      event.error === "service-not-allowed";
+
+    if (
+      offlineUnavailable &&
+      !usesOnlineFallback.current &&
+      wantsRecognition.current
+    ) {
+      usesOnlineFallback.current = true;
+      setError("Offline recognition unavailable; switching to online speech recognition.");
+      ExpoSpeechRecognitionModule.abort();
+      return;
+    }
+
+    if (
+      event.error === "not-allowed" ||
+      event.error === "language-not-supported" ||
+      event.error === "service-not-allowed"
+    ) {
+      wantsRecognition.current = false;
+    }
+
     if (!expectedSilence && event.error !== "aborted") {
       setError(event.message || `Speech recognition error: ${event.error}`);
     }
@@ -89,12 +113,8 @@ export function useSpeechTranscription({ onWords }: Options) {
 
   const start = useCallback(async () => {
     setError(null);
-    if (!ExpoSpeechRecognitionModule.supportsOnDeviceRecognition()) {
-      setError(
-        "On-device speech recognition is unavailable. Install an offline English speech model and try again.",
-      );
-      return false;
-    }
+    usesOnlineFallback.current =
+      !ExpoSpeechRecognitionModule.supportsOnDeviceRecognition();
 
     const permission =
       await ExpoSpeechRecognitionModule.requestPermissionsAsync();
