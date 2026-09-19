@@ -51,6 +51,7 @@
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
+    "react-native-web": "^0.20.0",
     "tsx": "^4.23.13",
     "zod": "^4.6.5"
   },

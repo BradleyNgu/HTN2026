@@ -15,6 +15,7 @@ const settings: AppSettings = {
   keywordSets: ["ai", "big data", "jargon"],
   situations: [],
   defaultAlert: "mom",
+  darkMode: false,
   callers: [
     {
       id: "caller-1",

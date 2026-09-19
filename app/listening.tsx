@@ -122,7 +122,7 @@ export default function ListeningScreen() {
     } else {
       detector.stop();
     }
-    router.back();
+    router.replace("/");
   };
 
   const phase = usesBackgroundService
@@ -146,26 +146,23 @@ export default function ListeningScreen() {
             : "Starting background listening…"
     : phaseLabels[detector.phase];
 
-  const triggerManually = () => {
-    if (usesBackgroundService) {
-      stopBackgroundListening();
-      handleTrigger("Manual escape requested");
-    } else {
-      detector.triggerManually();
-    }
-  };
-
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safe}>
       <TalkBlockHeader />
       <View style={styles.content}>
-        <Text style={styles.eyebrow}>LISTENING LIVE <Text style={styles.liveDot}>●</Text></Text>
+        <Text style={styles.eyebrow}>LIVE <Text style={styles.liveDot}>●</Text></Text>
         <Text style={styles.title}>
-          {phase === "suspected" ? "Conversation slowing down" : "Ready to listen"}
+          {phase === "suspected" ? "Conversation slowing down" : "Listening..."}
         </Text>
         <Text style={styles.subtitle}>{visibleError ?? "Alert: Mom / GF / Boss"}</Text>
         <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
         <Text style={styles.helper}>Keyword + situation check{"\n"}are active</Text>
+        <View style={styles.transcript}>
+          <Text style={styles.transcriptLabel}>TRANSCRIPT</Text>
+          <Text style={styles.transcriptText}>
+            {detector.partialTranscript || detector.recentText || "Listening for speech..."}
+          </Text>
+        </View>
 
         <View style={styles.progressCard}>
           <Text style={styles.progressLabel}>DETECTION CHECKS</Text>
@@ -192,18 +189,9 @@ export default function ListeningScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Pressable
-          accessibilityLabel="Trigger escape now"
-          accessibilityRole="button"
-          disabled={Boolean(triggerReason)}
-          onLongPress={triggerManually}
-          style={styles.manual}
-        >
-          <Text style={styles.manualIcon}>♧</Text>
-          <Text style={styles.panicTitle}>Manual button</Text>
-          <Text style={styles.panicBody}>failsafe tap</Text>
+        <Pressable accessibilityRole="button" onPress={stopSession} style={styles.endSession}>
+          <Text style={styles.endSessionText}>End session</Text>
         </Pressable>
-        <Pressable onPress={stopSession} style={styles.manual}><Text style={styles.manualIcon}>□</Text><Text style={styles.panicTitle}>End session</Text><Text style={styles.panicBody}>stop listening</Text></Pressable>
       </View>
     </SafeAreaView>
   );
@@ -279,6 +267,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   helper: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: spacing.md, textAlign: "center" },
+  transcript: { alignSelf: "stretch", borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, marginTop: spacing.lg, minHeight: 70, padding: spacing.md },
+  transcriptLabel: { color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1.3 },
+  transcriptText: { color: colors.text, fontSize: 13, lineHeight: 19, marginTop: spacing.xs },
   progressCard: {
     alignSelf: "stretch",
     backgroundColor: colors.surface,
@@ -305,9 +296,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: spacing.sm,
   },
-  footer: { flexDirection: "row", gap: spacing.sm, padding: spacing.md },
-  manual: { alignItems: "center", borderColor: colors.border, borderRadius: 12, borderWidth: 1, flex: 1, minHeight: 80, justifyContent: "center" },
-  manualIcon: { color: colors.primary, fontSize: 21, marginBottom: 2 },
+  footer: { padding: spacing.md },
+  endSession: { alignItems: "center", backgroundColor: "#FFF5F5", borderColor: "#F2C8CB", borderRadius: 12, borderWidth: 1, justifyContent: "center", minHeight: 48 },
+  endSessionText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
   panic: {
     alignItems: "center",
     borderColor: colors.primaryDark,

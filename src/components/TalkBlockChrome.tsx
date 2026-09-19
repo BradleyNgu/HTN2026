@@ -1,9 +1,22 @@
 import { router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { useSettings } from "@/store/SettingsContext";
+import { colors, isDarkMode, spacing } from "@/theme";
 
 export function TalkBlockHeader({ title }: { title?: string }) {
+  const { settings, updateSettings } = useSettings();
+
+  const toggleTheme = () => {
+    const value = !settings.darkMode;
+    void updateSettings({ darkMode: value });
+    if (Platform.OS === "web" && typeof localStorage !== "undefined") {
+      localStorage.setItem("conversation-escape.dark-mode", String(value));
+      window.location.reload();
+    }
+  };
+
   return (
     <View style={styles.header}>
       {title ? (
@@ -12,10 +25,26 @@ export function TalkBlockHeader({ title }: { title?: string }) {
         </Pressable>
       ) : null}
       <Text style={[styles.brand, title && styles.headerTitle]}>{title ?? "TalkBlock"}</Text>
+      {title ? <View style={styles.back} /> : null}
       {!title ? (
-        <Pressable accessibilityLabel="Open settings" onPress={() => router.push("/profile")} style={styles.settings}>
-          <Text style={styles.settingsText}>☷</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable accessibilityLabel={isDarkMode ? "Switch to light mode" : "Switch to dark mode"} onPress={toggleTheme} style={styles.themeButton}>
+            <Image
+              accessibilityLabel={isDarkMode ? "Sun" : "Moon"}
+              source={isDarkMode ? require("../../assets/sun.png") : require("../../assets/moon.png")}
+              style={styles.themeImage}
+            />
+          </Pressable>
+          <Pressable accessibilityLabel="Call now" onPress={() => router.push("/incoming-call")} style={styles.helpButton}>
+            <Image
+              accessibilityLabel="Call now"
+              source={isDarkMode
+                ? require("../../assets/information-dark-mode.png")
+                : require("../../assets/information-light-mode.png")}
+              style={styles.helpImage}
+            />
+          </Pressable>
+        </View>
       ) : null}
     </View>
   );
@@ -27,12 +56,24 @@ export function TalkBlockNav() {
   return (
     <View style={styles.nav}>
       <Pressable onPress={() => router.replace("/")} style={styles.navItem}>
-        <Text style={[styles.navIcon, !profileActive && styles.active]}>⌂</Text>
+        <Image
+          accessibilityLabel="Home"
+          source={isDarkMode
+            ? require("../../assets/home-dark-mode.png")
+            : require("../../assets/home-light-mode.png")}
+          style={[styles.navImage, !profileActive && styles.navImageActive]}
+        />
         <Text style={[styles.navLabel, !profileActive && styles.active]}>Home</Text>
       </Pressable>
       <Pressable onPress={() => router.push("/profile")} style={styles.navItem}>
-        <Text style={[styles.navIcon, profileActive && styles.active]}>♙</Text>
-        <Text style={[styles.navLabel, profileActive && styles.active]}>Profile</Text>
+        <Image
+          accessibilityLabel="Settings"
+          source={isDarkMode
+            ? require("../../assets/setting-dark-mode.png")
+            : require("../../assets/setting-light-mode.png")}
+          style={[styles.navImage, profileActive && styles.navImageActive]}
+        />
+        <Text style={[styles.navLabel, profileActive && styles.active]}>Settings</Text>
       </Pressable>
     </View>
   );
@@ -44,11 +85,16 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 18, textAlign: "center" },
   back: { width: 40 },
   backText: { color: colors.primary, fontSize: 34, lineHeight: 34 },
-  settings: { alignItems: "center", backgroundColor: colors.surfaceRaised, borderRadius: 18, height: 36, justifyContent: "center", width: 36 },
-  settingsText: { color: colors.textMuted, fontSize: 22, transform: [{ rotate: "90deg" }] },
+  headerActions: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  themeButton: { alignItems: "center", height: 40, justifyContent: "center", width: 40 },
+  themeImage: { height: 27, width: 27 },
+  helpButton: { alignItems: "center", height: 40, justifyContent: "center", width: 40 },
+  helpImage: { height: 36, width: 36 },
   nav: { borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", justifyContent: "space-around", paddingBottom: 8, paddingTop: 8 },
   navItem: { alignItems: "center", minWidth: 80 },
   navIcon: { color: colors.textMuted, fontSize: 22, lineHeight: 24 },
+  navImage: { height: 22, opacity: 0.55, width: 22 },
+  navImageActive: { opacity: 1 },
   navLabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   active: { color: colors.primary },
 });

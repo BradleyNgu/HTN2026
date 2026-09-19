@@ -35,6 +35,7 @@ export type AppSettings = {
   keywordSets: string[];
   situations: SituationType[];
   defaultAlert: AlertType;
+  darkMode: boolean;
 };
 
 export type Classification = {
