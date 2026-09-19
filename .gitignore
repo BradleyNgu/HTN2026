@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 node_modules/
 .expo/
 dist/
@@ -15,3 +16,7 @@ android/
 
 expo-env.d.ts
 # @end expo-cli
+=======
+# Local credentials -- never commit these.
+api_keys.py
+>>>>>>> origin/main
