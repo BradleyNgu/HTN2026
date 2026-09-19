@@ -8,15 +8,15 @@ import org.junit.jupiter.api.Test
 
 class BackgroundDetectionEngineTest {
   @Test
-  fun `rolling transcript emits 50 words then advances by 20`() {
+  fun `rolling transcript emits every 10 words`() {
     val accumulator = TranscriptAccumulator()
-    assertNull(accumulator.add(words(1, 49)))
-    val first = accumulator.add("word50")
-    assertEquals(50, first?.text?.split(" ")?.size)
-    assertNull(accumulator.add(words(51, 69)))
-    val second = accumulator.add("word70")
+    assertNull(accumulator.add(words(1, 9)))
+    val first = accumulator.add("word10")
+    assertEquals(10, first?.text?.split(" ")?.size)
+    assertNull(accumulator.add(words(11, 19)))
+    val second = accumulator.add("word20")
     assertEquals(2, second?.id)
-    assertTrue(second?.text?.startsWith("word21") == true)
+    assertTrue(second?.text?.startsWith("word11") == true)
   }
 
   @Test
