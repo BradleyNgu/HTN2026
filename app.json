@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Conversation Escape",
+    "slug": "conversation-escape",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "conversationescape",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.htn2026.conversationescape",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Conversation Escape transcribes nearby speech on your device to detect stalled conversations.",
+        "NSMicrophoneUsageDescription": "Conversation Escape uses your microphone only while you start a listening session."
+      }
+    },
+    "android": {
+      "package": "com.htn2026.conversationescape",
+      "permissions": [
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Conversation Escape to listen while a session is active.",
+          "speechRecognitionPermission": "Allow Conversation Escape to transcribe speech on this device."
+        }
+      ],
+      "expo-status-bar",
+      "expo-audio",
+      "./plugins/with-background-listener.cjs"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

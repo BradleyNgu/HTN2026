@@ -1,0 +1,28 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.backgroundlistener'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.backgroundlistener"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+  testOptions {
+    unitTests.all {
+      useJUnitPlatform()
+    }
+  }
+}
+
+dependencies {
+  testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
