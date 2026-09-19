@@ -1,4 +1,4 @@
-# Conversation Escape
+# TalkBlock
 
 An iOS/Android app that notices when a conversation has stalled and asks Twilio
 to place a real phone call. Android can continue listening from a
@@ -134,7 +134,7 @@ call.
 4. Start listening and grant microphone and notification permissions.
 5. Speak at least 20 words so two 10-word windows can be evaluated.
 6. On Android, press Home or lock the phone and confirm the persistent
-   “Conversation Escape is listening” notification remains.
+   “TalkBlock is listening” notification remains.
 7. Wait for two positive checks, use a keyword, or hold the manual escape
    control.
 8. Answer the real Twilio call on the configured test phone.
@@ -146,7 +146,7 @@ not support continuous recognition through every selected speech service.
 
 ### Samsung background settings
 
-On a Samsung S21, open **Settings → Apps → Conversation Escape → Battery** and
+On a Samsung S21, open **Settings → Apps → TalkBlock → Battery** and
 choose **Unrestricted** for the most reliable locked-screen behavior. Also
 remove the app from **Battery and device care → Battery → Background usage
 limits → Sleeping apps**. Android or One UI may still stop microphone work

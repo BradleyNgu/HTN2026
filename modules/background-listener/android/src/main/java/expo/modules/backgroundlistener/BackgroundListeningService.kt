@@ -385,7 +385,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
         "Background listening",
         NotificationManager.IMPORTANCE_LOW,
       ).apply {
-        description = "Shown while Conversation Escape uses the microphone"
+        description = "Shown while TalkBlock uses the microphone"
         setSound(null, null)
         enableVibration(false)
       },
@@ -412,7 +412,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     val phase = BackgroundListenerState.status.phase
     return NotificationCompat.Builder(this, LISTENING_CHANNEL_ID)
       .setSmallIcon(applicationInfo.icon)
-      .setContentTitle("Conversation Escape is listening")
+      .setContentTitle("TalkBlock is listening")
       .setContentText(if (phase == "evaluating") "Checking the latest conversation…" else "Tap to open, or stop at any time")
       .setOngoing(true)
       .setOnlyAlertOnce(true)
