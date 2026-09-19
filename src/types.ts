@@ -1,19 +1,26 @@
-export type EscapePresetId = "partner" | "boss" | "family" | "custom";
+export type ManagedAudio = {
+  uri: string;
+  fileName: string;
+  size?: number;
+};
 
-export type EscapePreset = {
-  id: EscapePresetId;
+export type CallerProfile = {
+  id: string;
   name: string;
   relationship: string;
   initials: string;
-  script: string;
+  fallbackScript: string;
+  audio: ManagedAudio | null;
+  createdAt: number;
 };
 
 export type Sensitivity = "low" | "medium" | "high";
 
 export type AppSettings = {
+  schemaVersion: 2;
   hasCompletedOnboarding: boolean;
-  selectedPresetId: EscapePresetId;
-  customPreset: EscapePreset;
+  callers: CallerProfile[];
+  selectedCallerId: string;
   sensitivity: Sensitivity;
   triggerDelaySeconds: number;
 };
@@ -22,7 +29,6 @@ export type Classification = {
   boring: boolean;
   confidence: number;
   reason: string;
-  suggestedPreset: EscapePresetId | null;
 };
 
 export type DetectorPhase =

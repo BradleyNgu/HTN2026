@@ -9,9 +9,6 @@ export const classificationSchema = z.object({
   boring: z.boolean(),
   confidence: z.number().min(0).max(1),
   reason: z.string().max(160),
-  suggestedPreset: z
-    .enum(["partner", "boss", "family", "custom"])
-    .nullable(),
 });
 
 export type ClassificationResult = z.infer<typeof classificationSchema>;

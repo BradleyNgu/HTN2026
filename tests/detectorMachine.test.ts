@@ -6,14 +6,12 @@ const positive = {
   boring: true,
   confidence: 0.9,
   reason: "Repetitive small talk",
-  suggestedPreset: null,
 } as const;
 
 const negative = {
   boring: false,
   confidence: 0.9,
   reason: "Active exchange",
-  suggestedPreset: null,
 } as const;
 
 describe("DetectorMachine", () => {

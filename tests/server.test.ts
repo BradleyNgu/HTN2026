@@ -19,7 +19,6 @@ describe("classification API", () => {
       boring: true,
       confidence: 0.82,
       reason: "Repeated topic with minimal engagement",
-      suggestedPreset: "boss",
     });
     const text =
       "We have discussed the same weather story several times and neither person is adding anything new.";
@@ -33,7 +32,6 @@ describe("classification API", () => {
       boring: true,
       confidence: 0.82,
       reason: "Repeated topic with minimal engagement",
-      suggestedPreset: "boss",
     });
     expect(JSON.stringify(response.body)).not.toContain(text);
     expect(response.headers["cache-control"]).toBe("no-store");

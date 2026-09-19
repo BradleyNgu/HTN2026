@@ -13,7 +13,6 @@ Safety rules:
 - Always return boring=false for distress, conflict, threats, harassment, medical, legal, or safety-sensitive situations.
 - Never infer protected traits or relationships not stated in the excerpt.
 - Keep the reason neutral, specific, and under 20 words.
-- suggestedPreset may be partner, boss, family, custom, or null.
 
 Return only JSON matching the supplied schema.`;
 
@@ -39,25 +38,11 @@ export const classifyConversation: Classifier = async (text) => {
         schema: {
           type: "object",
           additionalProperties: false,
-          required: [
-            "boring",
-            "confidence",
-            "reason",
-            "suggestedPreset",
-          ],
+          required: ["boring", "confidence", "reason"],
           properties: {
             boring: { type: "boolean" },
             confidence: { type: "number", minimum: 0, maximum: 1 },
             reason: { type: "string", maxLength: 160 },
-            suggestedPreset: {
-              anyOf: [
-                {
-                  type: "string",
-                  enum: ["partner", "boss", "family", "custom"],
-                },
-                { type: "null" },
-              ],
-            },
           },
         },
       },

@@ -11,15 +11,18 @@ audio is never recorded or uploaded.
 - A 50-word rolling window evaluated every 20 new words
 - Two-result confidence gate, sensitivity settings, stale-response handling,
   and a two-minute cooldown
-- Partner, boss, family, and editable custom caller presets
-- Call delay controls, a hold-to-trigger manual fallback, vibration, and a
-  spoken caller script
+- Add, edit, delete, and select custom callers
+- Import a caller MP3 from Android storage, preview it, and play it after
+  accepting the simulated call
+- Call delay controls, a hold-to-trigger manual fallback, vibration, playback
+  progress, and a spoken fallback when no MP3 is available
 - Memory-only transcripts and locally stored, transcript-free feedback
 - Rate-limited model proxy with structured output and no transcript logging
 
 The app intentionally does not imitate tornado, government, or other official
-emergency alerts. The incoming call is an in-app simulation, not a system
-CallKit/Telecom call.
+emergency alerts. The messaging-style incoming call is an in-app simulation,
+not a real WhatsApp, CallKit, or Android Telecom call. WhatsApp does not expose
+a public API that lets third-party apps automatically place incoming calls.
 
 ## Requirements
 
@@ -64,14 +67,50 @@ npm run android
 
 After the first native build, use `npm run start` for normal Metro development.
 
+## Independent Android APK
+
+The phone does not need the laptop once the API is hosted and a release APK is
+installed. It still needs internet access for OpenAI classification.
+
+1. Push this repository to GitHub.
+2. In Render, create a Blueprint and select the repository. Render reads
+   [`render.yaml`](render.yaml) and creates `conversation-escape-api`.
+3. Enter `OPENAI_API_KEY` when Render asks for the secret, then wait for
+   `/health` to report `{ "ok": true }`.
+4. Copy the Render HTTPS URL into local `.env`:
+
+   ```env
+   EXPO_PUBLIC_API_URL=https://your-service.onrender.com
+   ```
+
+5. Rebuild the APK so that public URL is embedded:
+
+   ```bash
+   cd android
+   ./gradlew assembleRelease
+   cd ..
+   ```
+
+6. Install the resulting standalone APK:
+
+   ```bash
+   adb install -r android/app/build/outputs/apk/release/app-release.apk
+   ```
+
+The current Gradle release uses the debug signing key and is intended for
+direct test distribution only. Use a private release keystore before publishing
+through Google Play. Never place `OPENAI_API_KEY` in an `EXPO_PUBLIC_` variable;
+only the Render service should hold it.
+
 ## Demo flow
 
 1. Complete the privacy notice.
-2. Pick a caller, sensitivity, and delay.
-3. Start listening and grant microphone/speech permissions.
-4. Speak at least 70 words so two overlapping windows can be evaluated.
-5. Wait for two positive checks, or hold the manual escape control.
-6. Accept the simulated call to hear the configured script.
+2. Add or edit a caller and choose an MP3 up to 25 MB from phone storage.
+3. Preview the MP3, save the caller, then select sensitivity and delay.
+4. Start listening and grant microphone/speech permissions.
+5. Speak at least 70 words so two overlapping windows can be evaluated.
+6. Wait for two positive checks, or hold the manual escape control.
+7. Accept the simulated call to hear the caller MP3.
 
 If the device reports that on-device recognition is unavailable, install an
 offline English speech model in the operating system settings. Android 12 and
@@ -82,6 +121,8 @@ speech service.
 
 - Recognition is foreground-only and starts only after an explicit tap.
 - The recognizer is configured not to persist audio.
+- Imported MP3s are copied into app-owned storage, never uploaded, and removed
+  when their caller is deleted or the file is replaced.
 - Transcript text exists in memory, is capped at 120 words, and is cleared
   when a session ends or triggers.
 - The server validates snippets, limits requests, disables response caching,
@@ -103,7 +144,9 @@ npm run typecheck
 npm run doctor
 ```
 
-Unit and API tests cover rolling-window overlap, transcript clearing,
-consecutive classifications, stale responses, cooldowns, request validation,
-and provider error redaction. Microphone permissions, vibration, speech
-recognition, and call audio still require physical-device testing.
+Unit and API tests cover settings migration, caller deletion, MP3 validation,
+missing-file fallback, media cleanup, rolling-window overlap, transcript
+clearing, consecutive classifications, stale responses, cooldowns, request
+validation, and provider error redaction. File picking, microphone permissions,
+vibration, speech recognition, and MP3 playback still require physical-device
+testing.

@@ -6,19 +6,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import {
-  defaultPresets,
-  getPreset,
-} from "@/features/escape/presets";
+  getSelectedCaller,
+} from "@/features/escape/callerProfiles";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, radius, spacing } from "@/theme";
-import { EscapePresetId, Sensitivity } from "@/types";
+import { Sensitivity } from "@/types";
 
 const sensitivityOptions: Sensitivity[] = ["low", "medium", "high"];
 
@@ -39,11 +37,7 @@ export default function HomeScreen() {
     );
   }
 
-  const selected = getPreset(
-    settings.selectedPresetId,
-    settings.customPreset,
-  );
-  const presets = [...defaultPresets, settings.customPreset];
+  const selected = getSelectedCaller(settings);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -51,74 +45,71 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.eyebrow}>READY WHEN YOU ARE</Text>
+        <Text style={styles.eyebrow}>ESCAPE CALL</Text>
         <Text style={styles.title}>Who should call?</Text>
         <Text style={styles.subtitle}>
-          Pick your escape, then keep this app open while you talk.
+          Choose a caller and attach a prerecorded MP3 for after you answer.
         </Text>
 
-        <View style={styles.presetGrid}>
-          {presets.map((preset) => {
-            const active = preset.id === settings.selectedPresetId;
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Your callers</Text>
+          <Pressable onPress={() => router.push("/caller-editor")}>
+            <Text style={styles.addText}>+ Add caller</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.callerList}>
+          {settings.callers.map((caller) => {
+            const active = caller.id === settings.selectedCallerId;
             return (
               <Pressable
                 accessibilityRole="button"
-                key={preset.id}
+                key={caller.id}
                 onPress={() =>
-                  updateSettings({
-                    selectedPresetId: preset.id as EscapePresetId,
-                  })
+                  updateSettings({ selectedCallerId: caller.id })
                 }
-                style={[styles.preset, active && styles.presetActive]}
+                style={[styles.caller, active && styles.callerActive]}
               >
-                <View style={[styles.avatar, active && styles.avatarActive]}>
-                  <Text style={styles.avatarText}>{preset.initials}</Text>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{caller.initials}</Text>
                 </View>
-                <Text style={styles.presetName}>{preset.name}</Text>
-                <Text style={styles.presetRole}>{preset.relationship}</Text>
+                <View style={styles.callerCopy}>
+                  <Text style={styles.callerName}>{caller.name}</Text>
+                  <Text style={styles.callerMeta}>
+                    {caller.audio
+                      ? `MP3 · ${caller.audio.fileName}`
+                      : "No MP3 · voice fallback"}
+                  </Text>
+                </View>
+                {active ? <Text style={styles.check}>✓</Text> : null}
+                <Pressable
+                  accessibilityLabel={`Edit ${caller.name}`}
+                  hitSlop={8}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    router.push({
+                      pathname: "/caller-editor",
+                      params: { id: caller.id },
+                    });
+                  }}
+                  style={styles.edit}
+                >
+                  <Text style={styles.editText}>Edit</Text>
+                </Pressable>
               </Pressable>
             );
           })}
         </View>
 
-        <View style={styles.preview}>
-          <Text style={styles.previewLabel}>CALL PREVIEW</Text>
-          <Text style={styles.previewName}>{selected.name}</Text>
-          <Text style={styles.previewScript}>“{selected.script}”</Text>
-        </View>
-
-        {settings.selectedPresetId === "custom" ? (
-          <View style={styles.customForm}>
-            <Text style={styles.sectionTitle}>Custom caller</Text>
-            <TextInput
-              accessibilityLabel="Caller name"
-              onChangeText={(name) =>
-                updateSettings({
-                  customPreset: {
-                    ...settings.customPreset,
-                    name,
-                    initials: name.trim().charAt(0).toUpperCase() || "?",
-                  },
-                })
-              }
-              placeholder="Caller name"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-              value={settings.customPreset.name}
-            />
-            <TextInput
-              accessibilityLabel="Call script"
-              multiline
-              onChangeText={(script) =>
-                updateSettings({
-                  customPreset: { ...settings.customPreset, script },
-                })
-              }
-              placeholder="What should they say?"
-              placeholderTextColor={colors.textMuted}
-              style={[styles.input, styles.scriptInput]}
-              value={settings.customPreset.script}
-            />
+        {selected ? (
+          <View style={styles.preview}>
+            <Text style={styles.previewLabel}>SIMULATED AUDIO CALL</Text>
+            <Text style={styles.previewName}>{selected.name}</Text>
+            <Text style={styles.previewStatus}>
+              {selected.audio
+                ? selected.audio.fileName
+                : "Add an MP3 for prerecorded caller audio"}
+            </Text>
           </View>
         ) : null}
 
@@ -175,16 +166,23 @@ export default function HomeScreen() {
         <View style={styles.privacy}>
           <Text style={styles.privacyTitle}>Private by design</Text>
           <Text style={styles.privacyBody}>
-            Audio stays on this device. Short text snippets are analyzed and
-            immediately discarded.
+            Caller MP3s remain on this phone. They are never sent to the
+            conversation classifier.
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
-          label={`Start listening as ${selected.name}`}
-          onPress={() => router.push("/listening")}
+          disabled={!selected}
+          label={
+            selected ? `Start listening as ${selected.name}` : "Add a caller"
+          }
+          onPress={() =>
+            selected
+              ? router.push("/listening")
+              : router.push("/caller-editor")
+          }
         />
       </View>
     </SafeAreaView>
@@ -199,9 +197,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
   },
-  content: { padding: spacing.lg, paddingBottom: 120 },
+  content: { padding: spacing.lg, paddingBottom: 130 },
   eyebrow: {
-    color: colors.primary,
+    color: "#3ED47E",
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1.8,
@@ -219,39 +217,51 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: spacing.sm,
   },
-  presetGrid: {
+  sectionHeader: {
+    alignItems: "center",
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
+    justifyContent: "space-between",
     marginTop: spacing.xl,
   },
-  preset: {
+  sectionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  addText: { color: "#3ED47E", fontSize: 14, fontWeight: "700" },
+  callerList: { gap: spacing.sm, marginTop: spacing.sm },
+  caller: {
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.md,
     borderWidth: 1,
+    flexDirection: "row",
     padding: spacing.md,
-    width: "48%",
   },
-  presetActive: { borderColor: colors.primary, borderWidth: 2 },
+  callerActive: { borderColor: "#3ED47E", borderWidth: 2 },
   avatar: {
     alignItems: "center",
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: "#1F8C59",
     borderRadius: radius.pill,
     height: 48,
     justifyContent: "center",
     width: 48,
   },
-  avatarActive: { backgroundColor: colors.primaryDark },
-  avatarText: { color: colors.text, fontSize: 18, fontWeight: "800" },
-  presetName: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: spacing.sm,
+  avatarText: { color: colors.text, fontSize: 17, fontWeight: "800" },
+  callerCopy: { flex: 1, marginLeft: spacing.md },
+  callerName: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  callerMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 3,
+    maxWidth: 190,
   },
-  presetRole: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  check: { color: "#3ED47E", fontSize: 18, marginRight: spacing.sm },
+  edit: { padding: spacing.xs },
+  editText: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
   preview: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -259,7 +269,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   previewLabel: {
-    color: colors.primary,
+    color: "#3ED47E",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -270,33 +280,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: spacing.sm,
   },
-  previewScript: {
+  previewStatus: {
     color: colors.textMuted,
-    fontSize: 15,
-    fontStyle: "italic",
-    lineHeight: 22,
-    marginTop: spacing.sm,
-  },
-  customForm: { marginTop: spacing.sm },
-  input: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 16,
-    marginTop: spacing.sm,
-    minHeight: 50,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  scriptInput: { minHeight: 84, textAlignVertical: "top" },
-  sectionTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
+    fontSize: 14,
+    marginTop: spacing.xs,
   },
   segment: {
     backgroundColor: colors.surface,
@@ -310,7 +297,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.sm,
   },
-  segmentActive: { backgroundColor: colors.primary },
+  segmentActive: { backgroundColor: "#3ED47E" },
   segmentText: {
     color: colors.textMuted,
     fontSize: 14,

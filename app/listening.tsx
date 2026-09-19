@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getPreset } from "@/features/escape/presets";
+import { getSelectedCaller } from "@/features/escape/callerProfiles";
 import { useConversationDetector } from "@/features/listening/useConversationDetector";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, radius, spacing } from "@/theme";
@@ -30,10 +30,7 @@ export default function ListeningScreen() {
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const preset = getPreset(
-    settings.selectedPresetId,
-    settings.customPreset,
-  );
+  const caller = getSelectedCaller(settings);
 
   const handleTrigger = useCallback(
     (reason: string) => {
@@ -59,7 +56,7 @@ export default function ListeningScreen() {
   useEffect(() => {
     if (!started.current) {
       started.current = true;
-      void detector.start();
+      if (caller) void detector.start();
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -85,7 +82,7 @@ export default function ListeningScreen() {
           />
           <Text style={styles.statusText}>
             {triggerReason
-              ? `Calling ${preset.name}…`
+              ? `Calling ${caller?.name ?? "your caller"}…`
               : phaseLabels[detector.phase]}
           </Text>
         </View>
