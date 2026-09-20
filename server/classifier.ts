@@ -25,10 +25,16 @@ Safety rules:
 
 Return only JSON matching the supplied schema.`;
 
-export type Classifier = (text: string) => Promise<ClassificationResult>;
+export type Classifier = (
+  text: string,
+  keywords?: readonly string[],
+) => Promise<ClassificationResult>;
 
-export const classifyConversation: Classifier = async (text) => {
-  const triggerKeyword = findTriggerKeyword(text);
+export const classifyConversation: Classifier = async (
+  text,
+  keywords = [],
+) => {
+  const triggerKeyword = findTriggerKeyword(text, keywords);
   if (triggerKeyword) {
     return {
       boring: true,

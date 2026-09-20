@@ -45,7 +45,12 @@ export function startBackgroundListening(
   if (!options.apiUrl.trim()) {
     throw new Error("EXPO_PUBLIC_API_URL is required for background classification.");
   }
-  return BackgroundListenerModule.start(options);
+  return BackgroundListenerModule.start({
+    ...options,
+    keywords: (options.keywords ?? [])
+      .map((keyword) => keyword.trim())
+      .filter(Boolean),
+  });
 }
 
 export function stopBackgroundListening() {

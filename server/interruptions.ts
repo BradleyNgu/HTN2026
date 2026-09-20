@@ -43,10 +43,28 @@ export const PhoneCallType = {
 
 export type PhoneCallType = (typeof PhoneCallType)[keyof typeof PhoneCallType];
 
+export class TwilioCallError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: number | null,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TwilioCallError";
+  }
+}
+
 export const AUDIO_FILENAMES: Record<PhoneCallType, string> = {
   [PhoneCallType.MOM]: "mom.mp3",
   [PhoneCallType.BOSS]: "boss.mp3",
   [PhoneCallType.GIRLFRIEND]: "girlfriend.mp3",
+};
+
+/** Twilio-owned numbers that place the outbound call (From), by alert type. */
+export const CALLER_FROM_ENV_NAMES: Record<PhoneCallType, string> = {
+  [PhoneCallType.MOM]: "TWILIO_RECIPIENT_MOM",
+  [PhoneCallType.BOSS]: "TWILIO_RECIPIENT_BOSS",
+  [PhoneCallType.GIRLFRIEND]: "TWILIO_RECIPIENT_GIRLFRIEND",
 };
 
 export const GITHUB_AUDIO_BASE_URL =
@@ -68,27 +86,27 @@ function validateE164(phoneNumber: string, parameterName: string): void {
 }
 
 /**
- * Call `phoneNumber` and play audio chosen by `phoneCallType`.
+ * Place a call from `fromNumber` to `toNumber` and play audio for `phoneCallType`.
  *
  * Resolves to the Twilio call SID. Twilio fetches the selected MP3 from GitHub.
  */
 export async function phoneCall(
   phoneCallType: PhoneCallType,
-  phoneNumber: string,
+  toNumber: string,
+  fromNumber: string,
 ): Promise<string> {
   if (!Object.values(PhoneCallType).includes(phoneCallType)) {
     throw new TypeError("phoneCallType must be a PhoneCallType value.");
   }
-  validateE164(phoneNumber, "phoneNumber");
+  validateE164(toNumber, "toNumber");
+  validateE164(fromNumber, "fromNumber");
   const accountSid = requireEnv("TWILIO_ACCOUNT_SID");
   const authToken = requireEnv("TWILIO_AUTH_TOKEN");
-  const twilioPhoneNumber = requireEnv("TWILIO_PHONE_NUMBER");
-  validateE164(twilioPhoneNumber, "TWILIO_PHONE_NUMBER");
 
   const audioUrl = `${GITHUB_AUDIO_BASE_URL}/${AUDIO_FILENAMES[phoneCallType]}`;
   const payload = new URLSearchParams({
-    To: phoneNumber,
-    From: twilioPhoneNumber,
+    To: toNumber,
+    From: fromNumber,
     Twiml: `<Response><Play>${escapeXml(audioUrl)}</Play></Response>`,
   });
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString(
@@ -110,9 +128,16 @@ export async function phoneCall(
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(
-      `Twilio call request failed (${response.status}): ${details}`,
-    );
+    let code: number | null = null;
+    let message = "Twilio rejected the call request";
+    try {
+      const parsed = JSON.parse(details) as { code?: number; message?: string };
+      code = typeof parsed.code === "number" ? parsed.code : null;
+      if (typeof parsed.message === "string") message = parsed.message;
+    } catch {
+      // Keep the safe fallback rather than returning an unstructured body.
+    }
+    throw new TwilioCallError(response.status, code, message);
   }
 
   const body = (await response.json()) as { sid: string };
@@ -122,6 +147,8 @@ export async function phoneCall(
 export async function callConfiguredRecipient(
   phoneCallType: PhoneCallType,
 ): Promise<string> {
-  const recipient = requireEnv("TWILIO_RECIPIENT_MOM");
-  return phoneCall(phoneCallType, recipient);
+  // Mom/Boss/Girlfriend numbers place the call; TEST_PHONE_NUMBER is who rings.
+  const fromNumber = requireEnv(CALLER_FROM_ENV_NAMES[phoneCallType]);
+  const toNumber = requireEnv("TEST_PHONE_NUMBER");
+  return phoneCall(phoneCallType, toNumber, fromNumber);
 }

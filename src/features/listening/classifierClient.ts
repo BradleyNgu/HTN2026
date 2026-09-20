@@ -6,6 +6,7 @@ export async function classifyTranscript(
   text: string,
   windowId: number,
   signal?: AbortSignal,
+  keywords: readonly string[] = [],
 ): Promise<ClassificationResponse> {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (!apiUrl) {
@@ -17,7 +18,11 @@ export async function classifyTranscript(
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/classify`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, windowId }),
+    body: JSON.stringify({
+      text,
+      windowId,
+      keywords: keywords.filter((keyword) => keyword.trim().length > 0),
+    }),
     signal,
   });
 

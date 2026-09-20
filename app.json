@@ -4,6 +4,7 @@
     "slug": "conversation-escape",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "conversationescape",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -16,6 +17,10 @@
     },
     "android": {
       "package": "com.htn2026.conversationescape",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "RECORD_AUDIO",
         "POST_NOTIFICATIONS",

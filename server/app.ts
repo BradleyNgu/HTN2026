@@ -8,6 +8,7 @@ import {
 } from "./classifier";
 import {
   PhoneCallType,
+  TwilioCallError,
   callConfiguredRecipient,
 } from "./interruptions";
 import { callRequestSchema, classifyRequestSchema } from "./schema";
@@ -62,7 +63,10 @@ export function createApp(
       }
 
       try {
-        const result = await classifier(parsed.data.text);
+        const result = await classifier(
+          parsed.data.text,
+          parsed.data.keywords,
+        );
         response.setHeader("Cache-Control", "no-store");
         response.json({ windowId: parsed.data.windowId, ...result });
       } catch (error) {
@@ -96,7 +100,29 @@ export function createApp(
         await callRecipient(parsed.data.callType);
         response.setHeader("Cache-Control", "no-store");
         response.status(202).json({ ok: true });
-      } catch {
+      } catch (error) {
+        if (error instanceof TwilioCallError) {
+          console.error("Twilio rejected call", {
+            status: error.status,
+            code: error.code,
+          });
+          response.status(502).json({
+            error: "Twilio rejected the phone call",
+            code: error.code,
+          });
+          return;
+        }
+        if (error instanceof Error && error.message.includes(" is not set.")) {
+          const missing = error.message.split(" is not set.")[0]?.trim();
+          console.error("Twilio call configuration is incomplete", { missing });
+          response.status(503).json({
+            error: missing
+              ? `Phone call configuration is incomplete: ${missing} is not set on the server`
+              : "Phone call configuration is incomplete",
+          });
+          return;
+        }
+        console.error("Phone call failed before completion");
         response
           .status(502)
           .json({ error: "Phone call is temporarily unavailable" });

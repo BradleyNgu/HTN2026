@@ -45,6 +45,14 @@ class BackgroundListenerModule : Module() {
         putExtra(BackgroundListeningService.EXTRA_API_URL, options.apiUrl)
         putExtra(BackgroundListeningService.EXTRA_LOCALE, options.locale)
         putExtra(BackgroundListeningService.EXTRA_CALL_TYPE, options.callType)
+        putStringArrayListExtra(
+          BackgroundListeningService.EXTRA_KEYWORDS,
+          ArrayList(
+            options.keywords
+              .map { it.trim() }
+              .filter { it.isNotEmpty() },
+          ),
+        )
       }
       ContextCompat.startForegroundService(context, intent)
       BackgroundListenerState.status.toMap()

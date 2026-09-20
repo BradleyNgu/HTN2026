@@ -15,11 +15,13 @@ import { useSpeechTranscription } from "./useSpeechTranscription";
 
 type Options = {
   sensitivity: Sensitivity;
+  keywords?: readonly string[];
   onTrigger: (reason: string) => void;
 };
 
 export function useConversationDetector({
   sensitivity,
+  keywords = [],
   onTrigger,
 }: Options) {
   const buffer = useRef(new RollingTranscriptBuffer());
@@ -27,6 +29,7 @@ export function useConversationDetector({
   const controllers = useRef(new Map<number, AbortController>());
   const abortSpeech = useRef<() => void>(() => undefined);
   const triggerCallback = useRef(onTrigger);
+  const keywordsRef = useRef(keywords);
   const [snapshot, setSnapshot] = useState<DetectorSnapshot>(
     machine.current.snapshot(),
   );
@@ -36,6 +39,10 @@ export function useConversationDetector({
   useEffect(() => {
     triggerCallback.current = onTrigger;
   }, [onTrigger]);
+
+  useEffect(() => {
+    keywordsRef.current = keywords;
+  }, [keywords]);
 
   const cancelRequests = useCallback(() => {
     controllers.current.forEach((controller) => controller.abort());
@@ -81,6 +88,7 @@ export function useConversationDetector({
           text,
           windowId,
           controller.signal,
+          keywordsRef.current,
         );
         handleClassification(result.windowId, result);
       } catch (error) {
@@ -100,7 +108,7 @@ export function useConversationDetector({
       const nextWindow = buffer.current.add(text);
       const recent = buffer.current.getRecentText();
       setRecentText(recent);
-      const triggerKeyword = findTriggerKeyword(recent);
+      const triggerKeyword = findTriggerKeyword(recent, keywordsRef.current);
       if (triggerKeyword) {
         triggerImmediately(keywordTriggerReason(triggerKeyword));
         return;

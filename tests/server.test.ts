@@ -2,6 +2,7 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../server/app";
+import { TwilioCallError } from "../server/interruptions";
 
 describe("classification API", () => {
   it("rejects malformed transcript windows", async () => {
@@ -73,5 +74,22 @@ describe("classification API", () => {
 
     expect(response.status).toBe(400);
     expect(phoneCaller).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe Twilio error code without provider details", async () => {
+    const classifier = vi.fn();
+    const phoneCaller = vi
+      .fn()
+      .mockRejectedValue(new TwilioCallError(400, 21211, "private details"));
+    const response = await request(createApp(classifier, phoneCaller))
+      .post("/call")
+      .send({ callType: "mom" });
+
+    expect(response.status).toBe(502);
+    expect(response.body).toEqual({
+      error: "Twilio rejected the phone call",
+      code: 21211,
+    });
+    expect(JSON.stringify(response.body)).not.toContain("private details");
   });
 });

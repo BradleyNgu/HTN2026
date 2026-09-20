@@ -20,12 +20,18 @@ export default function ProfileScreen() {
   ] as const;
 
   const testRealCall = async () => {
-    setTestCallStatus("Requesting Twilio call…");
+    if (settings.defaultAlert === "tornado") {
+      setTestCallStatus("Tornado alerts do not place a phone call");
+      return;
+    }
+    setTestCallStatus(`Requesting ${settings.defaultAlert} call…`);
     try {
-      await triggerConfiguredPhoneCall("mom");
+      await triggerConfiguredPhoneCall(settings.defaultAlert);
       setTestCallStatus("Call requested");
-    } catch {
-      setTestCallStatus("Call failed — check Render");
+    } catch (error) {
+      setTestCallStatus(
+        error instanceof Error ? error.message : "Call failed — check Render",
+      );
     }
   };
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const classifyRequestSchema = z.object({
   text: z.string().trim().min(20).max(1500),
   windowId: z.number().int().positive(),
+  keywords: z.array(z.string().trim().max(80)).max(40).optional().default([]),
 });
 
 export const classificationSchema = z.object({

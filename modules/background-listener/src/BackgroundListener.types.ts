@@ -7,6 +7,7 @@ export type BackgroundListenerOptions = {
   apiUrl: string;
   locale: string;
   callType: "mom" | "boss" | "girlfriend" | null;
+  keywords?: string[];
 };
 
 export type BackgroundListenerStatus = {

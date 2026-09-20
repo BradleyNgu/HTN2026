@@ -28,7 +28,7 @@ export class DetectorMachine {
 
   constructor(
     private readonly sensitivity: Sensitivity,
-    private readonly requiredPositiveResults = 2,
+    private readonly requiredPositiveResults = 1,
     private readonly cooldownMs = 120_000,
   ) {}
 

@@ -1,15 +1,32 @@
-const triggerKeywords = [
-  { label: "physical intelligence", pattern: /\bphysical\s+intelligence\b/i },
-  { label: "big data", pattern: /\bbig\s+data\b/i },
-  { label: "blockchain", pattern: /\bblockchain\b/i },
-  { label: "web3", pattern: /\bweb\s*3\b/i },
-  { label: "AI", pattern: /\bai\b/i },
-] as const;
+function normalizeKeywords(keywords: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const keyword of keywords) {
+    const label = keyword.trim().replace(/\s+/g, " ");
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(label);
+  }
+  return normalized;
+}
 
-export function findTriggerKeyword(text: string): string | null {
-  return (
-    triggerKeywords.find(({ pattern }) => pattern.test(text))?.label ?? null
-  );
+function patternForKeyword(keyword: string): RegExp {
+  const escaped = keyword
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/\s+/g, "\\s+");
+  return new RegExp(`\\b${escaped}\\b`, "i");
+}
+
+export function findTriggerKeyword(
+  text: string,
+  keywords: readonly string[] = [],
+): string | null {
+  for (const keyword of normalizeKeywords(keywords)) {
+    if (patternForKeyword(keyword).test(text)) return keyword;
+  }
+  return null;
 }
 
 export function keywordTriggerReason(keyword: string) {
