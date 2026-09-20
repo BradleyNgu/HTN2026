@@ -1,10 +1,10 @@
 import { router, usePathname } from "expo-router";
 import React from "react";
-import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Appearance, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useSettings } from "@/store/SettingsContext";
-import { colors, isDarkMode, spacing } from "@/theme";
+import { colors, spacing } from "@/theme";
 
 export function TalkBlockHeader({ title }: { title?: string }) {
   const { settings, updateSettings } = useSettings();
@@ -12,6 +12,12 @@ export function TalkBlockHeader({ title }: { title?: string }) {
   const toggleTheme = () => {
     const value = !settings.darkMode;
     void updateSettings({ darkMode: value });
+    if (Platform.OS !== "web") {
+      const setColorScheme = (Appearance as typeof Appearance & {
+        setColorScheme?: (scheme: "light" | "dark") => void;
+      }).setColorScheme;
+      setColorScheme?.(value ? "dark" : "light");
+    }
     if (Platform.OS === "web" && typeof localStorage !== "undefined") {
       localStorage.setItem("conversation-escape.dark-mode", String(value));
       window.location.reload();
@@ -29,17 +35,23 @@ export function TalkBlockHeader({ title }: { title?: string }) {
       {title ? <View style={styles.back} /> : null}
       {!title ? (
         <View style={styles.headerActions}>
-          <Pressable accessibilityLabel={isDarkMode ? "Switch to light mode" : "Switch to dark mode"} onPress={toggleTheme} style={styles.themeButton}>
+          <Pressable accessibilityLabel={settings.darkMode ? "Switch to light mode" : "Switch to dark mode"} onPress={toggleTheme} style={styles.themeButton}>
             <Image
-              accessibilityLabel={isDarkMode ? "Sun" : "Moon"}
-              source={isDarkMode ? require("../../assets/sun.png") : require("../../assets/moon.png")}
+              accessibilityLabel={settings.darkMode ? "Sun" : "Moon"}
+              source={settings.darkMode ? require("../../assets/sun.png") : require("../../assets/moon.png")}
               style={styles.themeImage}
             />
           </Pressable>
-          <Pressable accessibilityLabel="Call now" onPress={() => void triggerConfiguredPhoneCall("mom").catch(() => undefined)} style={styles.helpButton}>
+          <Pressable
+            accessibilityLabel="Call now"
+            onPress={() => void triggerConfiguredPhoneCall("mom").catch((error) => {
+              Alert.alert("Call unavailable", error instanceof Error ? error.message : "The failsafe call could not be placed.");
+            })}
+            style={styles.helpButton}
+          >
             <Image
               accessibilityLabel="Call now"
-              source={isDarkMode
+              source={settings.darkMode
                 ? require("../../assets/information-dark-mode.png")
                 : require("../../assets/information-light-mode.png")}
               style={styles.helpImage}
@@ -52,6 +64,7 @@ export function TalkBlockHeader({ title }: { title?: string }) {
 }
 
 export function TalkBlockNav() {
+  const { settings } = useSettings();
   const pathname = usePathname();
   const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/keyword") || pathname.startsWith("/situations") || pathname.startsWith("/default-alert");
   return (
@@ -59,7 +72,7 @@ export function TalkBlockNav() {
       <Pressable onPress={() => router.replace("/")} style={styles.navItem}>
         <Image
           accessibilityLabel="Home"
-          source={isDarkMode
+          source={settings.darkMode
             ? require("../../assets/home-dark-mode.png")
             : require("../../assets/home-light-mode.png")}
           style={[styles.navImage, !profileActive && styles.navImageActive]}
@@ -69,7 +82,7 @@ export function TalkBlockNav() {
       <Pressable onPress={() => router.push("/profile")} style={styles.navItem}>
         <Image
           accessibilityLabel="Settings"
-          source={isDarkMode
+          source={settings.darkMode
             ? require("../../assets/setting-dark-mode.png")
             : require("../../assets/setting-light-mode.png")}
           style={[styles.navImage, profileActive && styles.navImageActive]}
