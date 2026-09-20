@@ -12,6 +12,7 @@ export default function ProfileScreen() {
   const { settings } = useSettings();
   const [testCallStatus, setTestCallStatus] = useState("Test real phone call");
   const rows = [
+    ["⌕", "Your phone", settings.userPhoneNumber || "Not set", "/phone-setup"],
     ["⌕", "Keyword ", settings.keywordSets.join(", "), "/keyword-sets"],
     ["♧", "Default alert", settings.defaultAlert === "girlfriend" ? "girlfriend" : settings.defaultAlert, "/default-alert"],
     ["✓", "Ready to listen", "Listening is enabled", "/listening"],
@@ -24,7 +25,10 @@ export default function ProfileScreen() {
     }
     setTestCallStatus(`Requesting ${settings.defaultAlert} call…`);
     try {
-      await triggerConfiguredPhoneCall(settings.defaultAlert);
+      await triggerConfiguredPhoneCall(
+        settings.defaultAlert,
+        settings.userPhoneNumber,
+      );
       setTestCallStatus("Call requested");
     } catch (error) {
       setTestCallStatus(
@@ -42,7 +46,13 @@ export default function ProfileScreen() {
         <View style={styles.list}>
           {rows.map(([icon, title, detail, path]) => (
             <Pressable key={title} onPress={() => router.push(path)} style={styles.row}>
-              {title === "Keyword " ? (
+              {title === "Your phone" ? (
+                <Image
+                  accessibilityLabel="Your phone"
+                  source={require("../assets/phone-call (2).png")}
+                  style={styles.iconImage}
+                />
+              ) : title === "Keyword " ? (
                 <Image
                   accessibilityLabel="Keyword search"
                   source={require("../assets/search-interface-symbol (2).png")}

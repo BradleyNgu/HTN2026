@@ -53,26 +53,34 @@ describe("classification API", () => {
     });
   });
 
-  it("places a configured call without accepting a destination number", async () => {
+  it("places a call to the phone number supplied by the app", async () => {
     const classifier = vi.fn();
     const phoneCaller = vi.fn().mockResolvedValue("CA123");
     const response = await request(createApp(classifier, phoneCaller))
       .post("/call")
-      .send({ callType: "mom" });
+      .send({ callType: "mom", phoneNumber: "+14155552671" });
 
     expect(response.status).toBe(202);
     expect(response.body).toEqual({ ok: true });
-    expect(phoneCaller).toHaveBeenCalledWith("mom");
+    expect(phoneCaller).toHaveBeenCalledWith("mom", "+14155552671");
   });
 
-  it("rejects arbitrary phone numbers and unsupported call types", async () => {
+  it("rejects missing or invalid phone numbers and unsupported call types", async () => {
     const classifier = vi.fn();
     const phoneCaller = vi.fn();
-    const response = await request(createApp(classifier, phoneCaller))
+    const missingNumber = await request(createApp(classifier, phoneCaller))
+      .post("/call")
+      .send({ callType: "mom" });
+    const badType = await request(createApp(classifier, phoneCaller))
       .post("/call")
       .send({ callType: "other", phoneNumber: "+14155552671" });
+    const badNumber = await request(createApp(classifier, phoneCaller))
+      .post("/call")
+      .send({ callType: "mom", phoneNumber: "4155552671" });
 
-    expect(response.status).toBe(400);
+    expect(missingNumber.status).toBe(400);
+    expect(badType.status).toBe(400);
+    expect(badNumber.status).toBe(400);
     expect(phoneCaller).not.toHaveBeenCalled();
   });
 
@@ -83,7 +91,7 @@ describe("classification API", () => {
       .mockRejectedValue(new TwilioCallError(400, 21211, "private details"));
     const response = await request(createApp(classifier, phoneCaller))
       .post("/call")
-      .send({ callType: "mom" });
+      .send({ callType: "mom", phoneNumber: "+14155552671" });
 
     expect(response.status).toBe(502);
     expect(response.body).toEqual({

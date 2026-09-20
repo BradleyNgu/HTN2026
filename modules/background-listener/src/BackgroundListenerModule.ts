@@ -9,6 +9,7 @@ import type {
 declare class BackgroundListenerModule extends NativeModule<BackgroundListenerEvents> {
   start(options: BackgroundListenerOptions): BackgroundListenerStatus;
   stop(): boolean;
+  dismissTornadoAlert(): boolean;
   getStatus(): BackgroundListenerStatus;
 }
 

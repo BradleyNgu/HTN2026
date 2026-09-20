@@ -14,8 +14,14 @@ export const classificationSchema = z.object({
 
 export const phoneCallTypeSchema = z.enum(["mom", "boss", "girlfriend"]);
 
-export const callRequestSchema = z.object({
-  callType: phoneCallTypeSchema,
-}).strict();
+export const callRequestSchema = z
+  .object({
+    callType: phoneCallTypeSchema,
+    phoneNumber: z
+      .string()
+      .trim()
+      .regex(/^\+[1-9]\d{1,14}$/, "phoneNumber must be E.164"),
+  })
+  .strict();
 
 export type ClassificationResult = z.infer<typeof classificationSchema>;

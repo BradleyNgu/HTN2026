@@ -9,6 +9,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -44,10 +46,12 @@ class BackgroundListeningService : Service(), RecognitionListener {
   private var wordsHeard = 0
   private var triggerDelayElapsed = false
   private var callRequestFinished = true
+  private var alertPlayer: MediaPlayer? = null
   private val cleanup = CleanupCoordinator(
     listOf(
       { mainHandler.removeCallbacksAndMessages(null) },
       { stopRecognizer() },
+      { stopTornadoAlert() },
       { transcript.clear() },
       { releaseWakeLock() },
       { classifierExecutor.shutdownNow() },
@@ -65,6 +69,10 @@ class BackgroundListeningService : Service(), RecognitionListener {
       stopListening()
       return START_NOT_STICKY
     }
+    if (intent?.action == ACTION_DISMISS_TORNADO) {
+      finishTornadoAlert()
+      return START_NOT_STICKY
+    }
     if (intent?.action != ACTION_START) return START_NOT_STICKY
 
     config = ServiceConfig(
@@ -78,6 +86,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
       locale = intent.getStringExtra(EXTRA_LOCALE).orEmpty().ifBlank { "en-US" },
       callType = intent.getStringExtra(EXTRA_CALL_TYPE)
         ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
+      phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER).orEmpty().trim(),
       keywords = intent.getStringArrayListExtra(EXTRA_KEYWORDS)
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
@@ -232,7 +241,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
     transcript.clear()
     updateStatus(false, "triggered")
     val serviceConfig = config ?: return stopListening()
-    callRequestFinished = serviceConfig.callType == null
+    // Wait for either the Twilio request or tornado dismiss before stopping.
+    callRequestFinished = false
     triggerDelayElapsed = false
     BackgroundListenerEventBus.emit(
       "onTrigger",
@@ -240,20 +250,72 @@ class BackgroundListeningService : Service(), RecognitionListener {
         "callerId" to serviceConfig.callerId,
         "callerName" to serviceConfig.callerName,
         "reason" to reason,
+        "alertType" to (serviceConfig.callType ?: "tornado"),
       ),
     )
     val delayMs = serviceConfig.triggerDelaySeconds * 1_000L
     mainHandler.postDelayed({
       triggerDelayElapsed = true
-      serviceConfig.callType?.let { requestPhoneCall(serviceConfig, it) }
+      val callType = serviceConfig.callType
+      if (callType != null) {
+        requestPhoneCall(serviceConfig, callType)
+      } else {
+        presentTornadoAlert()
+      }
       finishTriggeredServiceIfReady()
     }, delayMs)
+  }
+
+  private fun presentTornadoAlert() {
+    stopTornadoAlert()
+    try {
+      val player = MediaPlayer()
+      player.setAudioAttributes(
+        AudioAttributes.Builder()
+          .setUsage(AudioAttributes.USAGE_ALARM)
+          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+          .build(),
+      )
+      resources.openRawResourceFd(R.raw.alert).use { asset ->
+        player.setDataSource(asset.fileDescriptor, asset.startOffset, asset.length)
+      }
+      player.isLooping = true
+      player.setVolume(1f, 1f)
+      player.prepare()
+      player.start()
+      alertPlayer = player
+    } catch (_: Exception) {
+      // Fall through to the emergency notification even if audio fails.
+    }
+    NotificationManagerCompat.from(this)
+      .notify(TORNADO_NOTIFICATION_ID, tornadoNotification())
+    acquireWakeLock()
+  }
+
+  private fun stopTornadoAlert() {
+    try {
+      alertPlayer?.stop()
+    } catch (_: RuntimeException) {
+      // Player may already be stopped.
+    }
+    alertPlayer?.release()
+    alertPlayer = null
+    NotificationManagerCompat.from(this).cancel(TORNADO_NOTIFICATION_ID)
+  }
+
+  private fun finishTornadoAlert() {
+    stopTornadoAlert()
+    releaseWakeLock()
+    callRequestFinished = true
+    triggerDelayElapsed = true
+    finishTriggeredServiceIfReady()
   }
 
   private fun requestPhoneCall(serviceConfig: ServiceConfig, callType: String) {
     classifierExecutor.execute {
       try {
-        ClassificationClient(serviceConfig.apiUrl).triggerCall(callType)
+        ClassificationClient(serviceConfig.apiUrl)
+          .triggerCall(callType, serviceConfig.phoneNumber)
       } catch (error: Exception) {
         mainHandler.post {
           updateStatus(
@@ -408,6 +470,18 @@ class BackgroundListeningService : Service(), RecognitionListener {
         enableVibration(false)
       },
     )
+    manager.createNotificationChannel(
+      NotificationChannel(
+        TORNADO_CHANNEL_ID,
+        "Emergency alerts",
+        NotificationManager.IMPORTANCE_HIGH,
+      ).apply {
+        description = "Tornado warning alerts from TalkBlock"
+        enableVibration(true)
+        setBypassDnd(true)
+        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+      },
+    )
   }
 
   private fun listeningNotification(): Notification {
@@ -441,6 +515,45 @@ class BackgroundListeningService : Service(), RecognitionListener {
       .build()
   }
 
+  private fun tornadoNotification(): Notification {
+    val openIntent = (packageManager.getLaunchIntentForPackage(packageName)
+      ?: Intent(Intent.ACTION_VIEW, Uri.parse("conversationescape://listening")))
+      .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+    val openPendingIntent = PendingIntent.getActivity(
+      this,
+      20,
+      openIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    val dismissPendingIntent = PendingIntent.getBroadcast(
+      this,
+      21,
+      Intent(this, BackgroundNotificationReceiver::class.java).apply {
+        action = BackgroundNotificationReceiver.ACTION_DISMISS_TORNADO
+      },
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    return NotificationCompat.Builder(this, TORNADO_CHANNEL_ID)
+      .setSmallIcon(applicationInfo.icon)
+      .setContentTitle("Emergency Alert")
+      .setContentText("Severe weather (Tornado warning)")
+      .setStyle(
+        NotificationCompat.BigTextStyle().bigText(
+          "A tornado warning has been issued for your area. Seek shelter immediately.",
+        ),
+      )
+      .setPriority(NotificationCompat.PRIORITY_MAX)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setOngoing(true)
+      .setAutoCancel(false)
+      .setContentIntent(openPendingIntent)
+      .setFullScreenIntent(openPendingIntent, true)
+      .addAction(0, "Open", openPendingIntent)
+      .addAction(0, "OK", dismissPendingIntent)
+      .build()
+  }
+
   override fun onDestroy() {
     cleanup.run()
     if (BackgroundListenerState.status.active) {
@@ -452,6 +565,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
   companion object {
     const val ACTION_START = "expo.modules.backgroundlistener.START"
     const val ACTION_STOP = "expo.modules.backgroundlistener.STOP_SERVICE"
+    const val ACTION_DISMISS_TORNADO = "expo.modules.backgroundlistener.DISMISS_TORNADO"
     const val EXTRA_CALLER_ID = "callerId"
     const val EXTRA_CALLER_NAME = "callerName"
     const val EXTRA_CALLER_RELATIONSHIP = "callerRelationship"
@@ -460,9 +574,12 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_API_URL = "apiUrl"
     const val EXTRA_LOCALE = "locale"
     const val EXTRA_CALL_TYPE = "callType"
+    const val EXTRA_PHONE_NUMBER = "phoneNumber"
     const val EXTRA_KEYWORDS = "keywords"
 
     const val LISTENING_NOTIFICATION_ID = 7401
+    const val TORNADO_NOTIFICATION_ID = 7402
     private const val LISTENING_CHANNEL_ID = "background-listening"
+    private const val TORNADO_CHANNEL_ID = "tornado-emergency-alert"
   }
 }

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,21 +11,34 @@ import { useSettings } from "@/store/SettingsContext";
 import { colors, spacing } from "@/theme";
 
 export default function HomeScreen() {
-  const { settings } = useSettings();
+  const { settings, isHydrated } = useSettings();
   const backgroundStatus = useBackgroundListenerStatus();
   const active = Platform.OS === "android" && backgroundStatus.active;
   const [callStatus, setCallStatus] = useState("Test real call");
 
+  useEffect(() => {
+    if (isHydrated && !settings.userPhoneNumber) {
+      router.replace("/phone-setup");
+    }
+  }, [isHydrated, settings.userPhoneNumber]);
+
   const testRealCall = async () => {
     setCallStatus("Requesting call...");
     try {
-      await triggerConfiguredPhoneCall(settings.defaultAlert === "tornado" ? "mom" : settings.defaultAlert);
+      await triggerConfiguredPhoneCall(
+        settings.defaultAlert === "tornado" ? "mom" : settings.defaultAlert,
+        settings.userPhoneNumber,
+      );
       setCallStatus("Call requested");
     } catch (error) {
       setCallStatus(error instanceof Error ? error.message : "Call failed");
       Alert.alert("Call unavailable", error instanceof Error ? error.message : "The call could not be placed.");
     }
   };
+
+  if (!isHydrated || !settings.userPhoneNumber) {
+    return <SafeAreaView style={styles.safe} />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -47,6 +60,11 @@ export default function HomeScreen() {
           <Pressable onPress={() => router.push("/default-alert")} style={styles.quickRow}>
             <Text style={styles.quickTitle}>Default alert</Text>
             <Text style={styles.quickValue}>{settings.defaultAlert}</Text>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push("/phone-setup")} style={styles.quickRow}>
+            <Text style={styles.quickTitle}>Your phone</Text>
+            <Text style={styles.quickValue}>{settings.userPhoneNumber}</Text>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
           <Pressable onPress={() => void testRealCall()} style={styles.testCall}>

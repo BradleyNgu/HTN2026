@@ -6,7 +6,13 @@ import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useSettings } from "@/store/SettingsContext";
 import { colors, spacing } from "@/theme";
 
-export function TalkBlockHeader({ title }: { title?: string }) {
+export function TalkBlockHeader({
+  title,
+  showBack = true,
+}: {
+  title?: string;
+  showBack?: boolean;
+}) {
   const { settings, updateSettings } = useSettings();
 
   const toggleTheme = () => {
@@ -27,10 +33,12 @@ export function TalkBlockHeader({ title }: { title?: string }) {
 
   return (
     <View style={styles.header}>
-      {title ? (
+      {title && showBack ? (
         <Pressable accessibilityLabel="Go back" onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
+      ) : title ? (
+        <View style={styles.back} />
       ) : null}
       <Text style={[styles.brand, title && styles.headerTitle]}>{title ?? "TalkBlock"}</Text>
       {title ? <View style={styles.back} /> : null}
@@ -53,7 +61,10 @@ export function TalkBlockHeader({ title }: { title?: string }) {
                 );
                 return;
               }
-              void triggerConfiguredPhoneCall(settings.defaultAlert).catch(
+              void triggerConfiguredPhoneCall(
+                settings.defaultAlert,
+                settings.userPhoneNumber,
+              ).catch(
                 (error) => {
                   Alert.alert(
                     "Call unavailable",
@@ -83,8 +94,8 @@ export function TalkBlockHeader({ title }: { title?: string }) {
 export function TalkBlockNav() {
   const { settings } = useSettings();
   const pathname = usePathname();
-  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/keyword") || pathname.startsWith("/default-alert");
-  return (
+  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/keyword") || pathname.startsWith("/default-alert")
+        return (
     <View style={styles.nav}>
       <Pressable onPress={() => router.replace("/")} style={styles.navItem}>
         <Image

@@ -45,8 +45,12 @@ export function startBackgroundListening(
   if (!options.apiUrl.trim()) {
     throw new Error("EXPO_PUBLIC_API_URL is required for background classification.");
   }
+  if (options.callType && !options.phoneNumber.trim()) {
+    throw new Error("Add your phone number before placing escape calls.");
+  }
   return BackgroundListenerModule.start({
     ...options,
+    phoneNumber: options.phoneNumber.trim(),
     keywords: (options.keywords ?? [])
       .map((keyword) => keyword.trim())
       .filter(Boolean),
@@ -55,6 +59,10 @@ export function startBackgroundListening(
 
 export function stopBackgroundListening() {
   return BackgroundListenerModule?.stop() ?? false;
+}
+
+export function dismissBackgroundTornadoAlert() {
+  return BackgroundListenerModule?.dismissTornadoAlert() ?? false;
 }
 
 export function getBackgroundListeningStatus() {

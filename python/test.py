@@ -5,6 +5,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "modules"))
 
 import interruptions
 
-TEST_PHONE_NUMBER = interruptions.require_env("TEST_PHONE_NUMBER")
+# Usage: python python/test.py +14155552671
+if len(sys.argv) < 2:
+    raise SystemExit("Usage: python python/test.py <+E164 phone number>")
 
-interruptions.phone_call(interruptions.PhoneCallType.GIRLFRIEND, TEST_PHONE_NUMBER)
+interruptions.phone_call(interruptions.PhoneCallType.GIRLFRIEND, sys.argv[1])

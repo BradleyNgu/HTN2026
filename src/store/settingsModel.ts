@@ -4,6 +4,7 @@ import { AppSettings, CallerProfile, Sensitivity } from "@/types";
 export const initialSettings: AppSettings = {
   schemaVersion: 2,
   hasCompletedOnboarding: false,
+  userPhoneNumber: "",
   callers: [starterCaller],
   selectedCallerId: starterCaller.id,
   sensitivity: "medium",
@@ -86,6 +87,7 @@ function fromLegacy(input: LegacySettings): AppSettings {
   return {
     schemaVersion: 2,
     hasCompletedOnboarding: Boolean(input.hasCompletedOnboarding),
+    userPhoneNumber: "",
     callers: [caller],
     selectedCallerId: caller.id,
     sensitivity: input.sensitivity ?? "medium",
@@ -114,9 +116,15 @@ export function migrateSettings(input: unknown): AppSettings {
     ? candidate.selectedCallerId!
     : safeCallers[0].id;
 
+  const userPhoneNumber =
+    typeof candidate.userPhoneNumber === "string"
+      ? candidate.userPhoneNumber.trim()
+      : "";
+
   return {
     schemaVersion: 2,
     hasCompletedOnboarding: Boolean(candidate.hasCompletedOnboarding),
+    userPhoneNumber,
     callers: safeCallers,
     selectedCallerId,
     sensitivity: candidate.sensitivity ?? "medium",

@@ -146,9 +146,9 @@ export async function phoneCall(
 
 export async function callConfiguredRecipient(
   phoneCallType: PhoneCallType,
+  toNumber: string,
 ): Promise<string> {
-  // Mom/Boss/Girlfriend numbers place the call; TEST_PHONE_NUMBER is who rings.
+  // Mom/Boss/Girlfriend numbers place the call; `toNumber` is who rings.
   const fromNumber = requireEnv(CALLER_FROM_ENV_NAMES[phoneCallType]);
-  const toNumber = requireEnv("TEST_PHONE_NUMBER");
   return phoneCall(phoneCallType, toNumber, fromNumber);
 }

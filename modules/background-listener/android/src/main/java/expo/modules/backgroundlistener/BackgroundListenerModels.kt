@@ -13,6 +13,7 @@ class BackgroundListenerOptions : Record {
   @Field val apiUrl: String = ""
   @Field val locale: String = "en-US"
   @Field val callType: String? = null
+  @Field val phoneNumber: String = ""
   @Field val keywords: List<String> = emptyList()
 }
 
@@ -25,6 +26,7 @@ data class ServiceConfig(
   val apiUrl: String,
   val locale: String,
   val callType: String?,
+  val phoneNumber: String,
   val keywords: List<String>,
 )
 

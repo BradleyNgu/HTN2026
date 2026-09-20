@@ -56,6 +56,7 @@ describe("background listener bridge", () => {
       apiUrl: "https://example.test",
       locale: "en-US",
       callType: "mom" as const,
+      phoneNumber: "+14155552671",
     };
     expect(startBackgroundListening(options)).toEqual(listeningStatus);
     expect(native.start).toHaveBeenCalledWith({ ...options, keywords: [] });
