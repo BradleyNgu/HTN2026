@@ -7,6 +7,7 @@ const permissions = [
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
   "android.permission.WAKE_LOCK",
   "android.permission.VIBRATE",
+  "android.permission.USE_FULL_SCREEN_INTENT",
 ];
 
 module.exports = function withBackgroundListener(config) {

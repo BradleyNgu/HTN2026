@@ -57,6 +57,10 @@ export function stopBackgroundListening() {
   return BackgroundListenerModule?.stop() ?? false;
 }
 
+export function dismissBackgroundTornadoAlert() {
+  return BackgroundListenerModule?.dismissTornadoAlert() ?? false;
+}
+
 export function getBackgroundListeningStatus() {
   return BackgroundListenerModule?.getStatus() ?? idleBackgroundStatus;
 }

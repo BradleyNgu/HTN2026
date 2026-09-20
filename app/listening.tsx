@@ -16,6 +16,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { TalkBlockHeader } from "@/components/TalkBlockChrome";
 import {
   addBackgroundTriggerListener,
+  dismissBackgroundTornadoAlert,
   getBackgroundListeningStatus,
   isBackgroundListeningSupported,
   requestBackgroundListeningPermissions,
@@ -55,13 +56,18 @@ export default function ListeningScreen() {
   const dismissTornadoWarning = useCallback(() => {
     tornadoPlayer.loop = false;
     tornadoPlayer.pause();
+    if (usesBackgroundService) {
+      dismissBackgroundTornadoAlert();
+    }
     setTornadoWarningVisible(false);
-  }, [tornadoPlayer]);
+  }, [tornadoPlayer, usesBackgroundService]);
 
   const presentTornadoWarning = useCallback(async () => {
     setTriggerReason("Tornado warning issued");
     setTornadoWarningVisible(true);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    // Android background service plays the alarm even when the app is closed.
+    if (usesBackgroundService) return;
     await setAudioModeAsync({
       playsInSilentMode: true,
       interruptionMode: "doNotMix",
@@ -73,7 +79,7 @@ export default function ListeningScreen() {
     tornadoPlayer.loop = true;
     await tornadoPlayer.seekTo(0);
     tornadoPlayer.play();
-  }, [tornadoPlayer]);
+  }, [tornadoPlayer, usesBackgroundService]);
 
   const handleTrigger = useCallback(
     (reason: string) => {
@@ -93,7 +99,7 @@ export default function ListeningScreen() {
           void presentTornadoWarning();
           return;
         }
-        void triggerConfiguredPhoneCall(callType)
+        void triggerConfiguredPhoneCall(callType, settings.userPhoneNumber)
           .then(() => setTriggerReason("Real phone call requested"))
           .catch((error: unknown) => {
             setPhoneCallError(
@@ -108,6 +114,7 @@ export default function ListeningScreen() {
       presentTornadoWarning,
       settings.defaultAlert,
       settings.triggerDelaySeconds,
+      settings.userPhoneNumber,
     ],
   );
 
@@ -174,6 +181,24 @@ export default function ListeningScreen() {
     presentTornadoWarning,
     settings.defaultAlert,
     settings.triggerDelaySeconds,
+    usesBackgroundService,
+  ]);
+
+  useEffect(() => {
+    if (
+      !usesBackgroundService ||
+      settings.defaultAlert !== "tornado" ||
+      backgroundStatus.phase !== "triggered" ||
+      tornadoWarningVisible
+    ) {
+      return;
+    }
+    setTornadoWarningVisible(true);
+    setTriggerReason("Tornado warning issued");
+  }, [
+    backgroundStatus.phase,
+    settings.defaultAlert,
+    tornadoWarningVisible,
     usesBackgroundService,
   ]);
 

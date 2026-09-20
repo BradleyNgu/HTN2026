@@ -115,31 +115,30 @@ Configure these server-only Render variables in addition to the OpenAI key:
 ```env
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
-TEST_PHONE_NUMBER=+15555550123
 TWILIO_RECIPIENT_MOM=+15555550124
 TWILIO_RECIPIENT_BOSS=+15555550125
 TWILIO_RECIPIENT_GIRLFRIEND=+15555550126
 ```
 
-`TEST_PHONE_NUMBER` is the phone that rings. The app's Default alert
-(Mom / Boss / Girlfriend) chooses which Twilio-owned number places the
-call and which audio plays. Those From numbers must be Twilio numbers on
-your account. Arbitrary destination numbers are rejected, and the endpoint
-is rate-limited. Twilio trial accounts can call only verified recipient
-numbers. The Tornado option does not place a call.
+On first launch the app asks for the phone number that should ring. The
+Default alert (Mom / Boss / Girlfriend) chooses which Twilio-owned number
+places the call and which audio plays. Those From numbers must be Twilio
+numbers on your account. Destination numbers must be E.164, and the
+endpoint is rate-limited. Twilio trial accounts can call only verified
+recipient numbers. The Tornado option does not place a call.
 
 ## Demo flow
 
-1. Complete the privacy notice.
+1. Enter the phone number that should receive escape calls.
 2. Select the desired Twilio call audio and detection settings.
-3. Confirm the test recipient is verified in Twilio.
+3. Confirm that number is verified in Twilio if you are on a trial account.
 4. Start listening and grant microphone and notification permissions.
 5. Speak at least 20 words so two 10-word windows can be evaluated.
 6. On Android, press Home or lock the phone and confirm the persistent
    “TalkBlock is listening” notification remains.
 7. Wait for two positive checks, use a keyword, or hold the manual escape
    control.
-8. Answer the real Twilio call on the configured test phone.
+8. Answer the real Twilio call on the phone number you entered.
 
 Install an offline English speech model for maximum privacy and responsiveness.
 If Samsung or another Android device rejects the offline service or locale, the

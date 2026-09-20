@@ -13,7 +13,10 @@ import {
 } from "./interruptions";
 import { callRequestSchema, classifyRequestSchema } from "./schema";
 
-export type PhoneCaller = (callType: PhoneCallType) => Promise<string>;
+export type PhoneCaller = (
+  callType: PhoneCallType,
+  phoneNumber: string,
+) => Promise<string>;
 
 export function createApp(
   classifier: Classifier = classifyConversation,
@@ -97,7 +100,7 @@ export function createApp(
       }
 
       try {
-        await callRecipient(parsed.data.callType);
+        await callRecipient(parsed.data.callType, parsed.data.phoneNumber);
         response.setHeader("Cache-Control", "no-store");
         response.status(202).json({ ok: true });
       } catch (error) {

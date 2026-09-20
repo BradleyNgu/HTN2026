@@ -69,6 +69,17 @@ class BackgroundListenerModule : Module() {
       true
     }
 
+    Function("dismissTornadoAlert") {
+      val context = appContext.reactContext
+        ?: throw IllegalStateException("React context is unavailable")
+      context.startService(
+        Intent(context, BackgroundListeningService::class.java).apply {
+          action = BackgroundListeningService.ACTION_DISMISS_TORNADO
+        },
+      )
+      true
+    }
+
     Function("getStatus") {
       BackgroundListenerState.status.toMap()
     }

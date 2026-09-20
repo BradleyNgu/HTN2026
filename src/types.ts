@@ -28,6 +28,8 @@ export type SituationType = {
 export type AppSettings = {
   schemaVersion: 2;
   hasCompletedOnboarding: boolean;
+  /** E.164 number that receives escape calls (e.g. +14155552671). */
+  userPhoneNumber: string;
   callers: CallerProfile[];
   selectedCallerId: string;
   sensitivity: Sensitivity;
