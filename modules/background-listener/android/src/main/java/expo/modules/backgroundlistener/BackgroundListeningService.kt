@@ -86,6 +86,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
       locale = intent.getStringExtra(EXTRA_LOCALE).orEmpty().ifBlank { "en-US" },
       callType = intent.getStringExtra(EXTRA_CALL_TYPE)
         ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
+      phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER).orEmpty().trim(),
       keywords = intent.getStringArrayListExtra(EXTRA_KEYWORDS)
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
@@ -313,7 +314,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
   private fun requestPhoneCall(serviceConfig: ServiceConfig, callType: String) {
     classifierExecutor.execute {
       try {
-        ClassificationClient(serviceConfig.apiUrl).triggerCall(callType)
+        ClassificationClient(serviceConfig.apiUrl)
+          .triggerCall(callType, serviceConfig.phoneNumber)
       } catch (error: Exception) {
         mainHandler.post {
           updateStatus(
@@ -572,6 +574,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_API_URL = "apiUrl"
     const val EXTRA_LOCALE = "locale"
     const val EXTRA_CALL_TYPE = "callType"
+    const val EXTRA_PHONE_NUMBER = "phoneNumber"
     const val EXTRA_KEYWORDS = "keywords"
 
     const val LISTENING_NOTIFICATION_ID = 7401

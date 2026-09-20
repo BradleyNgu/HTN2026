@@ -7,6 +7,8 @@ export type BackgroundListenerOptions = {
   apiUrl: string;
   locale: string;
   callType: "mom" | "boss" | "girlfriend" | null;
+  /** E.164 number that should receive the escape call. */
+  phoneNumber: string;
   keywords?: string[];
 };
 

@@ -137,6 +137,10 @@ export default function ListeningScreen() {
       return false;
     }
     try {
+      if (!settings.userPhoneNumber) {
+        setBackgroundError("Add your phone number before starting listening.");
+        return false;
+      }
       startBackgroundListening({
         callerId: caller.id,
         callerName: caller.name,
@@ -147,6 +151,7 @@ export default function ListeningScreen() {
         locale: "en-US",
         callType:
           settings.defaultAlert === "tornado" ? null : settings.defaultAlert,
+        phoneNumber: settings.userPhoneNumber,
         keywords: settings.keywordSets
           .map((keyword) => keyword.trim())
           .filter(Boolean),
@@ -165,6 +170,7 @@ export default function ListeningScreen() {
     settings.triggerDelaySeconds,
     settings.defaultAlert,
     settings.keywordSets,
+    settings.userPhoneNumber,
     usesBackgroundService,
   ]);
 

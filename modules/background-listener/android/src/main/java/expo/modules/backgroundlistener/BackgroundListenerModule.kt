@@ -45,6 +45,7 @@ class BackgroundListenerModule : Module() {
         putExtra(BackgroundListeningService.EXTRA_API_URL, options.apiUrl)
         putExtra(BackgroundListeningService.EXTRA_LOCALE, options.locale)
         putExtra(BackgroundListeningService.EXTRA_CALL_TYPE, options.callType)
+        putExtra(BackgroundListeningService.EXTRA_PHONE_NUMBER, options.phoneNumber)
         putStringArrayListExtra(
           BackgroundListeningService.EXTRA_KEYWORDS,
           ArrayList(

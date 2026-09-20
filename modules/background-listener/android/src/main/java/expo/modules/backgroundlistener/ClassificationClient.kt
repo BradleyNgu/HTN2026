@@ -50,9 +50,12 @@ class ClassificationClient(private val apiUrl: String) {
     }
   }
 
-  fun triggerCall(callType: String) {
+  fun triggerCall(callType: String, phoneNumber: String) {
     require(callType in setOf("mom", "boss", "girlfriend")) {
       "A supported call type is required"
+    }
+    require(phoneNumber.matches(Regex("^\\+[1-9]\\d{1,14}$"))) {
+      "A valid E.164 phone number is required"
     }
     val connection = URL("${apiUrl.trimEnd('/')}/call").openConnection() as HttpURLConnection
     try {
@@ -63,7 +66,12 @@ class ClassificationClient(private val apiUrl: String) {
       connection.setRequestProperty("Content-Type", "application/json")
       connection.setRequestProperty("Accept", "application/json")
       connection.outputStream.bufferedWriter(Charsets.UTF_8).use { writer ->
-        writer.write(JSONObject().put("callType", callType).toString())
+        writer.write(
+          JSONObject()
+            .put("callType", callType)
+            .put("phoneNumber", phoneNumber)
+            .toString(),
+        )
       }
       if (connection.responseCode !in 200..299) {
         val responseBody = connection.errorStream
