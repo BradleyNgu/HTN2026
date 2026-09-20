@@ -44,9 +44,25 @@ export function TalkBlockHeader({ title }: { title?: string }) {
           </Pressable>
           <Pressable
             accessibilityLabel="Call now"
-            onPress={() => void triggerConfiguredPhoneCall("mom").catch((error) => {
-              Alert.alert("Call unavailable", error instanceof Error ? error.message : "The failsafe call could not be placed.");
-            })}
+            onPress={() => {
+              if (settings.defaultAlert === "tornado") {
+                Alert.alert(
+                  "Call unavailable",
+                  "Tornado alerts do not place a phone call. Choose Mom, Boss, or Girlfriend first.",
+                );
+                return;
+              }
+              void triggerConfiguredPhoneCall(settings.defaultAlert).catch(
+                (error) => {
+                  Alert.alert(
+                    "Call unavailable",
+                    error instanceof Error
+                      ? error.message
+                      : "The failsafe call could not be placed.",
+                  );
+                },
+              );
+            }}
             style={styles.helpButton}
           >
             <Image

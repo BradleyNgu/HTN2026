@@ -99,13 +99,24 @@ export async function phoneCall(
   validateE164(phoneNumber, "phoneNumber");
   const accountSid = requireEnv("TWILIO_ACCOUNT_SID");
   const authToken = requireEnv("TWILIO_AUTH_TOKEN");
-  const twilioPhoneNumber = requireEnv("TWILIO_PHONE_NUMBER");
-  validateE164(twilioPhoneNumber, "TWILIO_PHONE_NUMBER");
+  loadEnv();
+  // Twilio-owned caller ID (From). Destinations come from TWILIO_RECIPIENT_*.
+  const twilioFromNumber = (
+    process.env.TWILIO_FROM_NUMBER ??
+    process.env.TWILIO_PHONE_NUMBER ??
+    ""
+  ).trim();
+  if (!twilioFromNumber) {
+    throw new Error(
+      "TWILIO_FROM_NUMBER is not set. Add it to .env (see .env.example).",
+    );
+  }
+  validateE164(twilioFromNumber, "TWILIO_FROM_NUMBER");
 
   const audioUrl = `${GITHUB_AUDIO_BASE_URL}/${AUDIO_FILENAMES[phoneCallType]}`;
   const payload = new URLSearchParams({
     To: phoneNumber,
-    From: twilioPhoneNumber,
+    From: twilioFromNumber,
     Twiml: `<Response><Play>${escapeXml(audioUrl)}</Play></Response>`,
   });
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString(
