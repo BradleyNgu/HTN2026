@@ -1,6 +1,7 @@
 import type { AlertType } from "@/types";
+import { isPhoneAlert } from "@/types";
 
-type TwilioCallType = Exclude<AlertType, "tornado">;
+type TwilioCallType = Extract<AlertType, "mom" | "girlfriend" | "boss">;
 
 export async function triggerConfiguredPhoneCall(
   callType: TwilioCallType,
@@ -13,6 +14,9 @@ export async function triggerConfiguredPhoneCall(
   }
   if (!phoneNumber) {
     throw new Error("Add your phone number before placing a call.");
+  }
+  if (!isPhoneAlert(callType)) {
+    throw new Error("This alert type does not place a phone call.");
   }
   const response = await fetch(`${apiUrl.replace(/\/$/, "")}/call`, {
     method: "POST",

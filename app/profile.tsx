@@ -14,11 +14,12 @@ export default function ProfileScreen() {
   const contextPreview =
     settings.detectionContext.split("\n").find((line) => line.trim())?.trim() ||
     "Edit detection criteria";
+  const alertLabel = settings.defaultAlert;
   const rows = [
     ["⌕", "Your phone", settings.userPhoneNumber || "Not set", "/phone-setup"],
     ["⌕", "Keyword ", settings.keywordSets.join(", "), "/keyword-sets"],
     ["✎", "Detection context", contextPreview, "/detection-context"],
-    ["♧", "Default alert", settings.defaultAlert === "girlfriend" ? "girlfriend" : settings.defaultAlert, "/default-alert"],
+    ["♧", "Default alert", alertLabel, "/default-alert"],
     ["✓", "Ready to listen", "Listening is enabled", "/listening"],
   ] as const;
 

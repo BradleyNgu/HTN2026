@@ -86,6 +86,8 @@ class BackgroundListeningService : Service(), RecognitionListener {
       locale = intent.getStringExtra(EXTRA_LOCALE).orEmpty().ifBlank { "en-US" },
       callType = intent.getStringExtra(EXTRA_CALL_TYPE)
         ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
+      localAlert = intent.getStringExtra(EXTRA_LOCAL_ALERT)
+        ?.takeIf { it == "tornado" },
       phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER).orEmpty().trim(),
       detectionContext = intent.getStringExtra(EXTRA_DETECTION_CONTEXT).orEmpty().trim(),
       keywords = intent.getStringArrayListExtra(EXTRA_KEYWORDS)
@@ -253,7 +255,11 @@ class BackgroundListeningService : Service(), RecognitionListener {
         "callerId" to serviceConfig.callerId,
         "callerName" to serviceConfig.callerName,
         "reason" to reason,
-        "alertType" to (serviceConfig.callType ?: "tornado"),
+        "alertType" to (
+          serviceConfig.callType
+            ?: serviceConfig.localAlert
+            ?: "tornado"
+          ),
       ),
     )
     val delayMs = serviceConfig.triggerDelaySeconds * 1_000L
@@ -577,6 +583,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_API_URL = "apiUrl"
     const val EXTRA_LOCALE = "locale"
     const val EXTRA_CALL_TYPE = "callType"
+    const val EXTRA_LOCAL_ALERT = "localAlert"
     const val EXTRA_PHONE_NUMBER = "phoneNumber"
     const val EXTRA_DETECTION_CONTEXT = "detectionContext"
     const val EXTRA_KEYWORDS = "keywords"

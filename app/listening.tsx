@@ -3,6 +3,8 @@ import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  BackHandler,
   Modal,
   Platform,
   Pressable,
@@ -28,6 +30,7 @@ import { getSelectedCaller } from "@/features/escape/callerProfiles";
 import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useConversationDetector } from "@/features/listening/useConversationDetector";
 import { useSettings } from "@/store/SettingsContext";
+import { isPhoneAlert } from "@/types";
 import { colors, radius, spacing } from "@/theme";
 
 const phaseLabels = {
@@ -39,19 +42,34 @@ const phaseLabels = {
   cooldown: "Cooling down",
 };
 
+const SKIP_AD_DURATION_MS = 8000;
+
 export default function ListeningScreen() {
   const { settings } = useSettings();
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [phoneCallError, setPhoneCallError] = useState<string | null>(null);
   const [tornadoWarningVisible, setTornadoWarningVisible] = useState(false);
+  const [skipAdVisible, setSkipAdVisible] = useState(false);
+  const [skipAdReady, setSkipAdReady] = useState(false);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipAdReadyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEscapeRef = useRef(false);
+  const adOpacity = useRef(new Animated.Value(0)).current;
+  const adProgress = useRef(new Animated.Value(0)).current;
   const tornadoPlayer = useAudioPlayer(require("../audio/alert.mp3"));
   const caller = getSelectedCaller(settings);
   const backgroundStatus = useBackgroundListenerStatus();
   const usesBackgroundService =
     Platform.OS === "android" && isBackgroundListeningSupported;
+
+  const leaveAppAfterTornado = useCallback(() => {
+    router.replace("/");
+    if (Platform.OS === "android") {
+      BackHandler.exitApp();
+    }
+  }, []);
 
   const dismissTornadoWarning = useCallback(() => {
     tornadoPlayer.loop = false;
@@ -60,7 +78,21 @@ export default function ListeningScreen() {
       dismissBackgroundTornadoAlert();
     }
     setTornadoWarningVisible(false);
-  }, [tornadoPlayer, usesBackgroundService]);
+    leaveAppAfterTornado();
+  }, [leaveAppAfterTornado, tornadoPlayer, usesBackgroundService]);
+
+  const stopSkipAdAnimation = useCallback(() => {
+    if (skipAdReadyTimer.current) {
+      clearTimeout(skipAdReadyTimer.current);
+      skipAdReadyTimer.current = null;
+    }
+    adOpacity.stopAnimation();
+    adProgress.stopAnimation();
+    setSkipAdVisible(false);
+    setSkipAdReady(false);
+    adOpacity.setValue(0);
+    adProgress.setValue(0);
+  }, [adOpacity, adProgress]);
 
   const presentTornadoWarning = useCallback(async () => {
     setTriggerReason("Tornado warning issued");
@@ -81,41 +113,89 @@ export default function ListeningScreen() {
     tornadoPlayer.play();
   }, [tornadoPlayer, usesBackgroundService]);
 
+  const runConfiguredEscape = useCallback(() => {
+    const callType = settings.defaultAlert;
+    setPhoneCallError(null);
+    if (callType === "tornado") {
+      void presentTornadoWarning();
+      return;
+    }
+    if (usesBackgroundService) {
+      // Native Android service already requested the Twilio call.
+      setTriggerReason("Real phone call requested");
+      return;
+    }
+    void triggerConfiguredPhoneCall(callType, settings.userPhoneNumber)
+      .then(() => setTriggerReason("Real phone call requested"))
+      .catch((error: unknown) => {
+        setPhoneCallError(
+          error instanceof Error
+            ? error.message
+            : "The real phone call could not be placed.",
+        );
+      });
+  }, [
+    presentTornadoWarning,
+    settings.defaultAlert,
+    settings.userPhoneNumber,
+    usesBackgroundService,
+  ]);
+
+  const finishSkipAdAndContinue = useCallback(() => {
+    if (!skipAdReady) return;
+    const shouldEscape = pendingEscapeRef.current;
+    pendingEscapeRef.current = false;
+    Animated.timing(adOpacity, {
+      toValue: 0,
+      duration: 280,
+      useNativeDriver: true,
+    }).start(() => {
+      stopSkipAdAnimation();
+      setTriggerReason("Connecting escape…");
+      if (shouldEscape) {
+        runConfiguredEscape();
+      }
+    });
+  }, [adOpacity, runConfiguredEscape, skipAdReady, stopSkipAdAnimation]);
+
+  const presentSkipAd = useCallback(async () => {
+    setTriggerReason("Sponsored interruption");
+    setSkipAdVisible(true);
+    setSkipAdReady(false);
+    adOpacity.setValue(0);
+    adProgress.setValue(0);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    Animated.timing(adOpacity, {
+      toValue: 1,
+      duration: 320,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(adProgress, {
+      toValue: 1,
+      duration: SKIP_AD_DURATION_MS,
+      useNativeDriver: false,
+    }).start();
+
+    if (skipAdReadyTimer.current) clearTimeout(skipAdReadyTimer.current);
+    skipAdReadyTimer.current = setTimeout(() => {
+      setSkipAdReady(true);
+    }, SKIP_AD_DURATION_MS);
+  }, [adOpacity, adProgress]);
+
   const handleTrigger = useCallback(
     (reason: string) => {
-      const callType = settings.defaultAlert;
-      const isTornado = callType === "tornado";
-      setTriggerReason(
-        isTornado
-          ? `${reason} · preparing tornado warning`
-          : `${reason} · requesting a real phone call`,
-      );
+      pendingEscapeRef.current = true;
+      setTriggerReason(`${reason} · loading sponsored interruption`);
       setPhoneCallError(null);
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
       timer.current = setTimeout(() => {
-        if (callType === "tornado") {
-          void presentTornadoWarning();
-          return;
-        }
-        void triggerConfiguredPhoneCall(callType, settings.userPhoneNumber)
-          .then(() => setTriggerReason("Real phone call requested"))
-          .catch((error: unknown) => {
-            setPhoneCallError(
-              error instanceof Error
-                ? error.message
-                : "The real phone call could not be placed.",
-            );
-          });
+        void presentSkipAd();
       }, settings.triggerDelaySeconds * 1000);
     },
-    [
-      presentTornadoWarning,
-      settings.defaultAlert,
-      settings.triggerDelaySeconds,
-      settings.userPhoneNumber,
-    ],
+    [presentSkipAd, settings.triggerDelaySeconds],
   );
 
   const detector = useConversationDetector({
@@ -138,7 +218,7 @@ export default function ListeningScreen() {
       return false;
     }
     try {
-      if (!settings.userPhoneNumber) {
+      if (isPhoneAlert(settings.defaultAlert) && !settings.userPhoneNumber) {
         setBackgroundError("Add your phone number before starting listening.");
         return false;
       }
@@ -150,8 +230,10 @@ export default function ListeningScreen() {
         triggerDelaySeconds: settings.triggerDelaySeconds,
         apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
         locale: "en-US",
-        callType:
-          settings.defaultAlert === "tornado" ? null : settings.defaultAlert,
+        callType: isPhoneAlert(settings.defaultAlert)
+          ? settings.defaultAlert
+          : null,
+        localAlert: settings.defaultAlert === "tornado" ? "tornado" : null,
         phoneNumber: settings.userPhoneNumber,
         detectionContext: settings.detectionContext,
         keywords: settings.keywordSets
@@ -178,35 +260,31 @@ export default function ListeningScreen() {
   ]);
 
   useEffect(() => {
-    if (!usesBackgroundService || settings.defaultAlert !== "tornado") return;
+    if (!usesBackgroundService) return;
     const subscription = addBackgroundTriggerListener(() => {
-      timer.current = setTimeout(
-        () => void presentTornadoWarning(),
-        settings.triggerDelaySeconds * 1000,
-      );
+      pendingEscapeRef.current = true;
+      timer.current = setTimeout(() => {
+        void presentSkipAd();
+      }, settings.triggerDelaySeconds * 1000);
     });
     return () => subscription?.remove();
-  }, [
-    presentTornadoWarning,
-    settings.defaultAlert,
-    settings.triggerDelaySeconds,
-    usesBackgroundService,
-  ]);
+  }, [presentSkipAd, settings.triggerDelaySeconds, usesBackgroundService]);
 
   useEffect(() => {
     if (
       !usesBackgroundService ||
-      settings.defaultAlert !== "tornado" ||
       backgroundStatus.phase !== "triggered" ||
+      skipAdVisible ||
       tornadoWarningVisible
     ) {
       return;
     }
-    setTornadoWarningVisible(true);
-    setTriggerReason("Tornado warning issued");
+    pendingEscapeRef.current = true;
+    void presentSkipAd();
   }, [
     backgroundStatus.phase,
-    settings.defaultAlert,
+    presentSkipAd,
+    skipAdVisible,
     tornadoWarningVisible,
     usesBackgroundService,
   ]);
@@ -218,6 +296,7 @@ export default function ListeningScreen() {
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      if (skipAdCompleteTimer.current) clearTimeout(skipAdCompleteTimer.current);
       tornadoPlayer.loop = false;
       tornadoPlayer.pause();
     };
@@ -226,7 +305,9 @@ export default function ListeningScreen() {
   }, []);
 
   const stopSession = () => {
+    pendingEscapeRef.current = false;
     dismissTornadoWarning();
+    stopSkipAdAnimation();
     if (usesBackgroundService) {
       stopBackgroundListening();
     } else {
@@ -246,9 +327,11 @@ export default function ListeningScreen() {
     : phoneCallError ?? detector.error;
   const statusLabel = usesBackgroundService
     ? backgroundStatus.phase === "triggered"
-      ? settings.defaultAlert === "tornado"
-        ? "Tornado warning issued"
-        : "Real phone call requested"
+      ? skipAdVisible
+        ? "Sponsored interruption"
+        : settings.defaultAlert === "tornado"
+          ? "Tornado warning issued"
+          : "Real phone call requested"
       : backgroundStatus.phase === "reconnecting"
         ? "Reconnecting speech recognition"
         : backgroundStatus.phase === "evaluating"
@@ -257,6 +340,11 @@ export default function ListeningScreen() {
             ? "Listening continues when locked or on Home"
             : "Starting background listening…"
     : phaseLabels[detector.phase];
+
+  const skipProgressWidth = adProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0%", "100%"],
+  });
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
@@ -294,13 +382,54 @@ export default function ListeningScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        animationType="none"
+        transparent
+        visible={skipAdVisible}
+      >
+        <Animated.View style={[styles.adBackdrop, { opacity: adOpacity }]}>
+          <Animated.View
+            style={[styles.adPlayer, { transform: [{ scale: adPulse }] }]}
+          >
+            <View style={styles.adStage}>
+              <Text style={styles.adEyebrow}>Sponsored</Text>
+              <Text style={styles.adHeadline}>
+                Still stuck in this conversation?
+              </Text>
+              <Text style={styles.adBody}>
+                TalkBlock Premium escapes awkward chats 40% faster. Limited time
+                offer for people who nodded once and regret it.
+              </Text>
+              <View style={styles.adFakeCta}>
+                <Text style={styles.adFakeCtaText}>Learn more</Text>
+              </View>
+            </View>
+            <View style={styles.adChrome}>
+              <View style={styles.adBadge}>
+                <Text style={styles.adBadgeText}>Ad</Text>
+              </View>
+              <Text style={styles.adTimer}>Skipping…</Text>
+              <View style={styles.skipChip}>
+                <Text style={styles.skipChipText}>Skip Ad ›</Text>
+                <View style={styles.skipProgressTrack}>
+                  <Animated.View
+                    style={[styles.skipProgressFill, { width: skipProgressWidth }]}
+                  />
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
       <TalkBlockHeader />
       <View style={styles.content}>
         <Text style={styles.eyebrow}>LIVE <Text style={styles.liveDot}>●</Text></Text>
         <Text style={styles.title}>
           {phase === "suspected" ? "Conversation slowing down" : "Listening..."}
         </Text>
-        <Text style={styles.subtitle}>{triggerReason ?? visibleError ?? "Alert: Mom / GF / Boss"}</Text>
+        <Text style={styles.subtitle}>{triggerReason ?? visibleError ?? statusLabel}</Text>
         <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
         <Text style={styles.helper}>Keyword check{"\n"}is active</Text>
         <View style={styles.transcript}>
@@ -548,5 +677,109 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     paddingHorizontal: 8,
     paddingVertical: 10,
+  },
+  adBackdrop: {
+    backgroundColor: "#000000",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+  },
+  adPlayer: {
+    alignSelf: "center",
+    backgroundColor: "#111111",
+    borderRadius: 8,
+    maxWidth: 420,
+    overflow: "hidden",
+    width: "100%",
+  },
+  adStage: {
+    backgroundColor: "#1B1B1B",
+    minHeight: 220,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  adEyebrow: {
+    color: "#FFCC00",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  adHeadline: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "800",
+    lineHeight: 32,
+    marginTop: spacing.md,
+  },
+  adBody: {
+    color: "#CFCFCF",
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: spacing.sm,
+  },
+  adFakeCta: {
+    alignSelf: "flex-start",
+    backgroundColor: "#3EA6FF",
+    borderRadius: 2,
+    marginTop: spacing.lg,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  adFakeCtaText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  adChrome: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.72)",
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  adBadge: {
+    backgroundColor: "#FFCC00",
+    borderRadius: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  adBadgeText: {
+    color: "#111111",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  adTimer: {
+    color: "#FFFFFF",
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  skipChip: {
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 2,
+    minWidth: 108,
+    overflow: "hidden",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  skipChipText: {
+    color: "#111111",
+    fontSize: 13,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  skipProgressTrack: {
+    backgroundColor: "rgba(0,0,0,0.12)",
+    borderRadius: 1,
+    height: 2,
+    marginTop: 6,
+    overflow: "hidden",
+    width: "100%",
+  },
+  skipProgressFill: {
+    backgroundColor: "#111111",
+    height: "100%",
   },
 });

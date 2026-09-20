@@ -18,6 +18,12 @@ export type Sensitivity = "low" | "medium" | "high";
 
 export type AlertType = "mom" | "girlfriend" | "boss" | "tornado";
 
+export function isPhoneAlert(
+  alert: AlertType,
+): alert is Exclude<AlertType, "tornado"> {
+  return alert === "mom" || alert === "girlfriend" || alert === "boss";
+}
+
 export type AppSettings = {
   schemaVersion: 2;
   hasCompletedOnboarding: boolean;

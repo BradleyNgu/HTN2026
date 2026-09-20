@@ -7,6 +7,8 @@ export type BackgroundListenerOptions = {
   apiUrl: string;
   locale: string;
   callType: "mom" | "boss" | "girlfriend" | null;
+  /** Local overlay when no Twilio call should be placed. */
+  localAlert?: "tornado" | null;
   /** E.164 number that should receive the escape call. */
   phoneNumber: string;
   /** Free-text criteria forwarded to the classifier prompt. */

@@ -61,6 +61,7 @@ describe("background listener bridge", () => {
     expect(startBackgroundListening(options)).toEqual(listeningStatus);
     expect(native.start).toHaveBeenCalledWith({
       ...options,
+      localAlert: null,
       detectionContext: "",
       keywords: [],
     });

@@ -130,6 +130,14 @@ export function migrateSettings(input: unknown): AppSettings {
       ? candidate.detectionContext.trim()
       : DEFAULT_DETECTION_CONTEXT;
 
+  const defaultAlert =
+    candidate.defaultAlert === "mom" ||
+    candidate.defaultAlert === "girlfriend" ||
+    candidate.defaultAlert === "boss" ||
+    candidate.defaultAlert === "tornado"
+      ? candidate.defaultAlert
+      : initialSettings.defaultAlert;
+
   return {
     schemaVersion: 2,
     hasCompletedOnboarding: Boolean(candidate.hasCompletedOnboarding),
@@ -142,7 +150,7 @@ export function migrateSettings(input: unknown): AppSettings {
       ? candidate.keywordSets.filter((keyword): keyword is string => typeof keyword === "string")
       : initialSettings.keywordSets,
     detectionContext,
-    defaultAlert: candidate.defaultAlert ?? initialSettings.defaultAlert,
+    defaultAlert,
     darkMode: Boolean(candidate.darkMode),
   };
 }
