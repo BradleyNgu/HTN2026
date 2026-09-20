@@ -8,7 +8,7 @@ import { colors, spacing } from "@/theme";
 
 export default function KeywordSetsScreen() {
   const { settings, updateSettings } = useSettings();
-  const commonKeywords = ["AI", "big data", "data-centers", "common jargon"];
+  const commonKeywords = ["AI", "big data", "data centers", "agentic"];
   const updateKeyword = (index: number, value: string) => {
     const next = [...settings.keywordSets];
     next[index] = value;

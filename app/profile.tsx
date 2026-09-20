@@ -11,10 +11,8 @@ import { colors, spacing } from "@/theme";
 export default function ProfileScreen() {
   const { settings } = useSettings();
   const [testCallStatus, setTestCallStatus] = useState("Test real phone call");
-  const enabled = settings.situations.filter((item) => item.enabled).map((item) => item.title.toLowerCase()).join(" + ");
   const rows = [
     ["⌕", "Keyword ", settings.keywordSets.join(", "), "/keyword-sets"],
-    ["♧", "Situations", enabled || "none selected", "/situations"],
     ["♧", "Default alert", settings.defaultAlert === "girlfriend" ? "girlfriend" : settings.defaultAlert, "/default-alert"],
     ["✓", "Ready to listen", "Listening is enabled", "/listening"],
   ] as const;
@@ -48,12 +46,6 @@ export default function ProfileScreen() {
                 <Image
                   accessibilityLabel="Keyword search"
                   source={require("../assets/search-interface-symbol (2).png")}
-                  style={styles.iconImage}
-                />
-              ) : title === "Situations" ? (
-                <Image
-                  accessibilityLabel="Situations"
-                  source={require("../assets/question (2).png")}
                   style={styles.iconImage}
                 />
               ) : title === "Default alert" ? (

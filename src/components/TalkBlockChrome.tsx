@@ -83,7 +83,7 @@ export function TalkBlockHeader({ title }: { title?: string }) {
 export function TalkBlockNav() {
   const { settings } = useSettings();
   const pathname = usePathname();
-  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/keyword") || pathname.startsWith("/situations") || pathname.startsWith("/default-alert");
+  const profileActive = pathname.startsWith("/profile") || pathname.startsWith("/keyword") || pathname.startsWith("/default-alert");
   return (
     <View style={styles.nav}>
       <Pressable onPress={() => router.replace("/")} style={styles.navItem}>
