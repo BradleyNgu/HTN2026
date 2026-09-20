@@ -140,6 +140,6 @@ export async function phoneCall(
 export async function callConfiguredRecipient(
   phoneCallType: PhoneCallType,
 ): Promise<string> {
-  const recipient = requireEnv("TWILIO_RECIPIENT_MOM");
+  const recipient = requireEnv("TEST_PHONE_NUMBER");
   return phoneCall(phoneCallType, recipient);
 }

@@ -116,12 +116,12 @@ Configure these server-only Render variables in addition to the OpenAI key:
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 TWILIO_PHONE_NUMBER=+15555550123
-TWILIO_RECIPIENT_MOM=+15555550124
+TEST_PHONE_NUMBER=+15555550124
 ```
 
 After the existing two-positive or keyword trigger, the app sends only the
 selected Mom/Boss/Girlfriend audio type to `/call`. During testing, every type
-calls the single fixed `TWILIO_RECIPIENT_MOM` number. Arbitrary destination
+calls the single fixed `TEST_PHONE_NUMBER` number. Arbitrary destination
 numbers are rejected, and the endpoint is rate-limited. Twilio trial accounts
 can call only verified recipient numbers. The Tornado option does not place a
 call.

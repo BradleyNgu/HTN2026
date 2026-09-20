@@ -20,5 +20,5 @@ services:
         sync: false
       - key: TWILIO_PHONE_NUMBER
         sync: false
-      - key: TWILIO_RECIPIENT_MOM
+      - key: TEST_PHONE_NUMBER
         sync: false
