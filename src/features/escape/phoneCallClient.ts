@@ -17,6 +17,11 @@ export async function triggerConfiguredPhoneCall(
     signal,
   });
   if (!response.ok) {
-    throw new Error("The phone call could not be placed.");
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+      code?: number | null;
+    } | null;
+    const code = body?.code ? ` (Twilio ${body.code})` : "";
+    throw new Error(`${body?.error ?? "The phone call could not be placed"}${code}`);
   }
 }

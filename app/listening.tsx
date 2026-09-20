@@ -62,8 +62,12 @@ export default function ListeningScreen() {
         }
         void triggerConfiguredPhoneCall(settings.defaultAlert)
           .then(() => setTriggerReason("Real phone call requested"))
-          .catch(() => {
-            setPhoneCallError("The real phone call could not be placed.");
+          .catch((error: unknown) => {
+            setPhoneCallError(
+              error instanceof Error
+                ? error.message
+                : "The real phone call could not be placed.",
+            );
           });
       }, settings.triggerDelaySeconds * 1000);
     },

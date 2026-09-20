@@ -6,7 +6,7 @@
     mergedManifest="build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml"
     proguardFiles="build/intermediates/default_proguard_files/global/proguard-android.txt-8.12.0"
     partialResultsDir="build/intermediates/lint_vital_partial_results/release/lintVitalAnalyzeRelease/out"
-    desugaredMethodsFiles="/Users/bradleynguyen/.gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
+    desugaredMethodsFiles="/private/var/folders/hj/kgj__bp501qf6fjtwms3_q_00000gn/T/cursor-sandbox-cache/bf210d1999bed63724347ee2ab28a08a/gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
   <buildFeatures
       namespacing="REQUIRED"/>
   <sourceProviders>
@@ -26,6 +26,6 @@
       applicationId="expo.modules.backgroundlistener"
       generatedSourceFolders="build/generated/ap_generated_sources/release/out:build/generated/source/buildConfig/release"
       generatedResourceFolders="build/generated/res/resValues/release"
-      desugaredMethodsFiles="/Users/bradleynguyen/.gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="/private/var/folders/hj/kgj__bp501qf6fjtwms3_q_00000gn/T/cursor-sandbox-cache/bf210d1999bed63724347ee2ab28a08a/gradle/caches/9.3.1/transforms/3a24a85fa604e81523809ef260674030/transformed/D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>

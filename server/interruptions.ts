@@ -43,6 +43,17 @@ export const PhoneCallType = {
 
 export type PhoneCallType = (typeof PhoneCallType)[keyof typeof PhoneCallType];
 
+export class TwilioCallError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: number | null,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TwilioCallError";
+  }
+}
+
 export const AUDIO_FILENAMES: Record<PhoneCallType, string> = {
   [PhoneCallType.MOM]: "mom.mp3",
   [PhoneCallType.BOSS]: "boss.mp3",
@@ -110,9 +121,16 @@ export async function phoneCall(
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(
-      `Twilio call request failed (${response.status}): ${details}`,
-    );
+    let code: number | null = null;
+    let message = "Twilio rejected the call request";
+    try {
+      const parsed = JSON.parse(details) as { code?: number; message?: string };
+      code = typeof parsed.code === "number" ? parsed.code : null;
+      if (typeof parsed.message === "string") message = parsed.message;
+    } catch {
+      // Keep the safe fallback rather than returning an unstructured body.
+    }
+    throw new TwilioCallError(response.status, code, message);
   }
 
   const body = (await response.json()) as { sid: string };

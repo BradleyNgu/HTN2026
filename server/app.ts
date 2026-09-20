@@ -8,6 +8,7 @@ import {
 } from "./classifier";
 import {
   PhoneCallType,
+  TwilioCallError,
   callConfiguredRecipient,
 } from "./interruptions";
 import { callRequestSchema, classifyRequestSchema } from "./schema";
@@ -96,7 +97,26 @@ export function createApp(
         await callRecipient(parsed.data.callType);
         response.setHeader("Cache-Control", "no-store");
         response.status(202).json({ ok: true });
-      } catch {
+      } catch (error) {
+        if (error instanceof TwilioCallError) {
+          console.error("Twilio rejected call", {
+            status: error.status,
+            code: error.code,
+          });
+          response.status(502).json({
+            error: "Twilio rejected the phone call",
+            code: error.code,
+          });
+          return;
+        }
+        if (error instanceof Error && error.message.includes(" is not set.")) {
+          console.error("Twilio call configuration is incomplete");
+          response.status(503).json({
+            error: "Phone call configuration is incomplete",
+          });
+          return;
+        }
+        console.error("Phone call failed before completion");
         response
           .status(502)
           .json({ error: "Phone call is temporarily unavailable" });

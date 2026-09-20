@@ -24,8 +24,10 @@ export default function ProfileScreen() {
     try {
       await triggerConfiguredPhoneCall("mom");
       setTestCallStatus("Call requested");
-    } catch {
-      setTestCallStatus("Call failed — check Render");
+    } catch (error) {
+      setTestCallStatus(
+        error instanceof Error ? error.message : "Call failed — check Render",
+      );
     }
   };
 
