@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "build": "expo export --platform web",
     "doctor": "npx expo-doctor"
   },
   "repository": {
