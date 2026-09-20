@@ -176,7 +176,7 @@ export default function ListeningScreen() {
   finishSkipAdRef.current = finishSkipAdAndContinue;
 
   const presentSkipAd = useCallback(async () => {
-    setTriggerReason("Sponsored interruption");
+    setTriggerReason("Bullshit Detected");
     setSkipAdVisible(true);
     adOpacity.setValue(0);
     adProgress.setValue(0);
@@ -202,16 +202,25 @@ export default function ListeningScreen() {
   const handleTrigger = useCallback(
     (reason: string) => {
       pendingEscapeRef.current = true;
-      setTriggerReason(`${reason} · loading sponsored interruption`);
+      setTriggerReason("Bullshit Detected");
       setPhoneCallError(null);
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
       timer.current = setTimeout(() => {
+        if (settings.defaultAlert === "tornado") {
+          void presentTornadoWarning();
+          return;
+        }
         void presentSkipAd();
       }, settings.triggerDelaySeconds * 1000);
     },
-    [presentSkipAd, settings.triggerDelaySeconds],
+    [
+      presentSkipAd,
+      presentTornadoWarning,
+      settings.defaultAlert,
+      settings.triggerDelaySeconds,
+    ],
   );
 
   const detector = useConversationDetector({
@@ -280,11 +289,21 @@ export default function ListeningScreen() {
     const subscription = addBackgroundTriggerListener(() => {
       pendingEscapeRef.current = true;
       timer.current = setTimeout(() => {
+        if (settings.defaultAlert === "tornado") {
+          void presentTornadoWarning();
+          return;
+        }
         void presentSkipAd();
       }, settings.triggerDelaySeconds * 1000);
     });
     return () => subscription?.remove();
-  }, [presentSkipAd, settings.triggerDelaySeconds, usesBackgroundService]);
+  }, [
+    presentSkipAd,
+    presentTornadoWarning,
+    settings.defaultAlert,
+    settings.triggerDelaySeconds,
+    usesBackgroundService,
+  ]);
 
   useEffect(() => {
     if (
@@ -296,10 +315,16 @@ export default function ListeningScreen() {
       return;
     }
     pendingEscapeRef.current = true;
+    if (settings.defaultAlert === "tornado") {
+      void presentTornadoWarning();
+      return;
+    }
     void presentSkipAd();
   }, [
     backgroundStatus.phase,
     presentSkipAd,
+    presentTornadoWarning,
+    settings.defaultAlert,
     skipAdVisible,
     tornadoWarningVisible,
     usesBackgroundService,
@@ -347,7 +372,7 @@ export default function ListeningScreen() {
   const statusLabel = usesBackgroundService
     ? backgroundStatus.phase === "triggered"
       ? skipAdVisible
-        ? "Sponsored interruption"
+        ? "Bullshit Detected"
         : settings.defaultAlert === "tornado"
           ? "Tornado warning issued"
           : "Real phone call requested"
@@ -402,53 +427,41 @@ export default function ListeningScreen() {
         </View>
       </Modal>
 
-      <Modal
-        animationType="none"
-        transparent
-        visible={skipAdVisible}
-      >
-        <Animated.View style={[styles.adBackdrop, { opacity: adOpacity }]}>
-          <View style={styles.adPlayer}>
-            <View style={styles.adStage}>
-              <Text style={styles.adEyebrow}>Sponsored</Text>
-              <Text style={styles.adHeadline}>
-                Still stuck in this conversation?
-              </Text>
-              <Text style={styles.adBody}>
-                TalkBlock Premium escapes awkward chats 40% faster. Limited time
-                offer for people who nodded once and regret it.
-              </Text>
-              <View style={styles.adFakeCta}>
-                <Text style={styles.adFakeCtaText}>Learn more</Text>
-              </View>
-            </View>
-            <View style={styles.adChrome}>
-              <View style={styles.adBadge}>
-                <Text style={styles.adBadgeText}>Ad</Text>
-              </View>
-              <Text style={styles.adTimer}>Skipping…</Text>
-              <View style={styles.skipChip}>
-                <Text style={styles.skipChipText}>Skip Ad ›</Text>
-                <View style={styles.skipProgressTrack}>
-                  <Animated.View
-                    style={[styles.skipProgressFill, { width: skipProgressWidth }]}
-                  />
-                </View>
-              </View>
-            </View>
-          </View>
-        </Animated.View>
-      </Modal>
-
       <TalkBlockHeader />
       <View style={styles.content}>
         <Text style={styles.eyebrow}>LIVE <Text style={styles.liveDot}>●</Text></Text>
         <Text style={styles.title}>
-          {phase === "suspected" ? "Conversation slowing down" : "Listening..."}
+          {skipAdVisible ||
+          (phase === "triggered" && settings.defaultAlert !== "tornado")
+            ? "Bullshit Detected"
+            : phase === "suspected"
+              ? "Conversation slowing down"
+              : "Listening..."}
         </Text>
         <Text style={styles.subtitle}>{triggerReason ?? visibleError ?? statusLabel}</Text>
-        <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
-        <Text style={styles.helper}>Keyword check{"\n"}is active</Text>
+        {skipAdVisible ? (
+          <Animated.View style={[styles.skipCenter, { opacity: adOpacity }]}>
+            <View style={styles.skipChip}>
+              <Animated.View
+                style={[styles.skipProgressFill, { width: skipProgressWidth }]}
+              />
+              <View style={styles.adBadge}>
+                <Text style={styles.adBadgeText}>Ad</Text>
+              </View>
+              <Text style={styles.skipChipText}>Skip Ad ›</Text>
+            </View>
+            <Text style={styles.skipHelper}>Skipping interruption…</Text>
+          </Animated.View>
+        ) : (
+          <>
+            <View style={styles.wave}>
+              {[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => (
+                <View key={index} style={[styles.waveBar, { height }]} />
+              ))}
+            </View>
+            <Text style={styles.helper}>Keyword check{"\n"}is active</Text>
+          </>
+        )}
         <View style={styles.transcript}>
           <Text style={styles.transcriptLabel}>TRANSCRIPT</Text>
           <Text style={styles.transcriptText}>
@@ -498,7 +511,7 @@ export default function ListeningScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: colors.background, flex: 1 },
+  safe: { backgroundColor: colors.background, flex: 1, position: "relative" },
   content: {
     alignItems: "center",
     flex: 1,
@@ -567,6 +580,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   helper: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: spacing.md, textAlign: "center" },
+  skipCenter: {
+    alignItems: "center",
+    marginTop: spacing.md,
+    minHeight: 72,
+    justifyContent: "center",
+  },
+  skipHelper: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
   transcript: { alignSelf: "stretch", borderColor: colors.border, borderRadius: radius.md, borderWidth: 1, marginTop: spacing.lg, minHeight: 70, padding: spacing.md },
   transcriptLabel: { color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1.3 },
   transcriptText: { color: colors.text, fontSize: 13, lineHeight: 19, marginTop: spacing.xs },
@@ -695,108 +721,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 10,
   },
-  adBackdrop: {
-    backgroundColor: "#000000",
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.md,
-  },
-  adPlayer: {
-    alignSelf: "center",
-    backgroundColor: "#111111",
-    borderRadius: 8,
-    maxWidth: 420,
-    overflow: "hidden",
-    width: "100%",
-  },
-  adStage: {
-    backgroundColor: "#1B1B1B",
-    minHeight: 220,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-  },
-  adEyebrow: {
-    color: "#FFCC00",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-  },
-  adHeadline: {
-    color: "#FFFFFF",
-    fontSize: 26,
-    fontWeight: "800",
-    lineHeight: 32,
-    marginTop: spacing.md,
-  },
-  adBody: {
-    color: "#CFCFCF",
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: spacing.sm,
-  },
-  adFakeCta: {
-    alignSelf: "flex-start",
-    backgroundColor: "#3EA6FF",
-    borderRadius: 2,
-    marginTop: spacing.lg,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  adFakeCtaText: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  adChrome: {
+  skipChip: {
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.72)",
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    backgroundColor: "rgba(20,20,20,0.92)",
+    borderColor: "rgba(255,255,255,0.18)",
+    borderRadius: 4,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    minWidth: 168,
+    overflow: "hidden",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  skipProgressFill: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    top: 0,
   },
   adBadge: {
     backgroundColor: "#FFCC00",
     borderRadius: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    left: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    position: "absolute",
+    top: 8,
+    zIndex: 1,
   },
   adBadgeText: {
     color: "#111111",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
   },
-  adTimer: {
-    color: "#FFFFFF",
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  skipChip: {
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 2,
-    minWidth: 108,
-    overflow: "hidden",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
   skipChipText: {
-    color: "#111111",
-    fontSize: 13,
+    color: "#FFFFFF",
+    fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
-  },
-  skipProgressTrack: {
-    backgroundColor: "rgba(0,0,0,0.12)",
-    borderRadius: 1,
-    height: 2,
-    marginTop: 6,
-    overflow: "hidden",
-    width: "100%",
-  },
-  skipProgressFill: {
-    backgroundColor: "#111111",
-    height: "100%",
+    zIndex: 1,
   },
 });

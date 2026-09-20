@@ -28,7 +28,7 @@ export default function DefaultAlertScreen() {
       <View style={styles.content}>
         <Text style={styles.intro}>
           This is the &quot;alert&quot; TalkBlock will place after the Skip Ad
-          animation when nonsense is recognized.
+          chip finishes when nonsense is recognized.
         </Text>
         <Text style={styles.eyebrow}>CHOOSE DEFAULT ALERT</Text>
         {alerts.map(([id, label]) => (
