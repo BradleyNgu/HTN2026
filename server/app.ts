@@ -113,9 +113,12 @@ export function createApp(
           return;
         }
         if (error instanceof Error && error.message.includes(" is not set.")) {
-          console.error("Twilio call configuration is incomplete");
+          const missing = error.message.split(" is not set.")[0]?.trim();
+          console.error("Twilio call configuration is incomplete", { missing });
           response.status(503).json({
-            error: "Phone call configuration is incomplete",
+            error: missing
+              ? `Phone call configuration is incomplete: ${missing} is not set on the server`
+              : "Phone call configuration is incomplete",
           });
           return;
         }
