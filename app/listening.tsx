@@ -162,7 +162,7 @@ export default function ListeningScreen() {
     : phaseLabels[detector.phase];
 
   return (
-    <SafeAreaView edges={["bottom"]} style={styles.safe}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
       <TalkBlockHeader />
       <View style={styles.content}>
         <Text style={styles.eyebrow}>LIVE <Text style={styles.liveDot}>●</Text></Text>
