@@ -299,7 +299,7 @@ export default function ListeningScreen() {
         </Text>
         <Text style={styles.subtitle}>{triggerReason ?? visibleError ?? "Alert: Mom / GF / Boss"}</Text>
         <View style={styles.wave}>{[18, 28, 42, 22, 50, 32, 22, 38, 18].map((height, index) => <View key={index} style={[styles.waveBar, { height }]} />)}</View>
-        <Text style={styles.helper}>Keyword + situation check{"\n"}are active</Text>
+        <Text style={styles.helper}>Keyword check{"\n"}is active</Text>
         <View style={styles.transcript}>
           <Text style={styles.transcriptLabel}>TRANSCRIPT</Text>
           <Text style={styles.transcriptText}>

@@ -42,6 +42,13 @@ describe("settings migration", () => {
       fallbackScript: "Please come home right away.",
     });
   });
+
+  it("does not keep legacy situations in the simplified settings model", () => {
+    const settings = migrateSettings(null);
+
+    expect("situations" in settings).toBe(false);
+    expect(settings).not.toHaveProperty("situations");
+  });
 });
 
 describe("caller deletion", () => {

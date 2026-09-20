@@ -18,13 +18,6 @@ export type Sensitivity = "low" | "medium" | "high";
 
 export type AlertType = "mom" | "girlfriend" | "boss" | "tornado";
 
-export type SituationType = {
-  id: "mom" | "student" | "boss" | "tornado";
-  title: string;
-  description: string;
-  enabled: boolean;
-};
-
 export type AppSettings = {
   schemaVersion: 2;
   hasCompletedOnboarding: boolean;
@@ -35,7 +28,6 @@ export type AppSettings = {
   sensitivity: Sensitivity;
   triggerDelaySeconds: number;
   keywordSets: string[];
-  situations: SituationType[];
   defaultAlert: AlertType;
   darkMode: boolean;
 };

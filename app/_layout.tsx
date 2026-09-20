@@ -23,7 +23,6 @@ export default function RootLayout() {
         <Stack.Screen name="phone-setup" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
         <Stack.Screen name="keyword-sets" options={{ headerShown: false }} />
-        <Stack.Screen name="situations" options={{ headerShown: false }} />
         <Stack.Screen name="default-alert" options={{ headerShown: false }} />
         <Stack.Screen
           name="caller-editor"

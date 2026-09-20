@@ -1,12 +1,5 @@
 import { starterCaller } from "@/features/escape/callerProfiles";
-import { AppSettings, CallerProfile, Sensitivity, SituationType } from "@/types";
-
-export const defaultSituations: SituationType[] = [
-  { id: "mom", title: "Mom", description: "You are stuck in a long family conversation.", enabled: true },
-  { id: "student", title: "Student", description: "You are stuck explaining something one-on-one.", enabled: false },
-  { id: "boss", title: "Boss", description: "Your boss asks you to stay longer.", enabled: true },
-  { id: "tornado", title: "Tornado", description: "Severe weather is moving into the area.", enabled: false },
-];
+import { AppSettings, CallerProfile, Sensitivity } from "@/types";
 
 export const initialSettings: AppSettings = {
   schemaVersion: 2,
@@ -16,8 +9,7 @@ export const initialSettings: AppSettings = {
   selectedCallerId: starterCaller.id,
   sensitivity: "medium",
   triggerDelaySeconds: 2,
-  keywordSets: ["ai", "big data", "jargon"],
-  situations: defaultSituations,
+  keywordSets: ["ai", "big data", "agentic"],
   defaultAlert: "mom",
   darkMode: false,
 };
@@ -101,7 +93,6 @@ function fromLegacy(input: LegacySettings): AppSettings {
     sensitivity: input.sensitivity ?? "medium",
     triggerDelaySeconds: input.triggerDelaySeconds ?? 2,
     keywordSets: initialSettings.keywordSets,
-    situations: initialSettings.situations,
     defaultAlert: initialSettings.defaultAlert,
     darkMode: false,
   };
@@ -141,15 +132,6 @@ export function migrateSettings(input: unknown): AppSettings {
     keywordSets: Array.isArray(candidate.keywordSets)
       ? candidate.keywordSets.filter((keyword): keyword is string => typeof keyword === "string")
       : initialSettings.keywordSets,
-    situations: defaultSituations.map((defaultSituation) => {
-      const savedSituation = Array.isArray(candidate.situations)
-        ? candidate.situations.find((situation) => situation?.id === defaultSituation.id)
-        : undefined;
-      return {
-        ...defaultSituation,
-        enabled: savedSituation ? Boolean(savedSituation.enabled) : defaultSituation.enabled,
-      };
-    }),
     defaultAlert: candidate.defaultAlert ?? initialSettings.defaultAlert,
     darkMode: Boolean(candidate.darkMode),
   };
