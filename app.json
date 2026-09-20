@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "scheme": "conversationescape",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.htn2026.conversationescape",
@@ -16,6 +17,10 @@
     },
     "android": {
       "package": "com.htn2026.conversationescape",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "RECORD_AUDIO",
         "POST_NOTIFICATIONS",
