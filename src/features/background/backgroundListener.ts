@@ -51,6 +51,7 @@ export function startBackgroundListening(
   return BackgroundListenerModule.start({
     ...options,
     phoneNumber: options.phoneNumber.trim(),
+    detectionContext: (options.detectionContext ?? "").trim(),
     keywords: (options.keywords ?? [])
       .map((keyword) => keyword.trim())
       .filter(Boolean),

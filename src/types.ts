@@ -28,6 +28,8 @@ export type AppSettings = {
   sensitivity: Sensitivity;
   triggerDelaySeconds: number;
   keywordSets: string[];
+  /** Free-text criteria for when the classifier should mark a conversation boring. */
+  detectionContext: string;
   defaultAlert: AlertType;
   darkMode: boolean;
 };

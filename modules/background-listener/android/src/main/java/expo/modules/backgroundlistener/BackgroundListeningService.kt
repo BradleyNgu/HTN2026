@@ -87,6 +87,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
       callType = intent.getStringExtra(EXTRA_CALL_TYPE)
         ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
       phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER).orEmpty().trim(),
+      detectionContext = intent.getStringExtra(EXTRA_DETECTION_CONTEXT).orEmpty().trim(),
       keywords = intent.getStringArrayListExtra(EXTRA_KEYWORDS)
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
@@ -196,6 +197,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
           ClassificationClient(serviceConfig.apiUrl),
           window,
           serviceConfig.keywords,
+          serviceConfig.detectionContext,
         )
         mainHandler.post {
           if (!stopping && !triggered) {
@@ -220,12 +222,13 @@ class BackgroundListeningService : Service(), RecognitionListener {
     client: ClassificationClient,
     window: TranscriptWindow,
     keywords: List<String>,
+    detectionContext: String,
   ): ClassificationResult {
     var lastError: Exception? = null
     repeat(2) { attempt ->
       if (attempt > 0) TimeUnit.MILLISECONDS.sleep(1_000)
       try {
-        return client.classify(window, keywords)
+        return client.classify(window, keywords, detectionContext)
       } catch (error: Exception) {
         lastError = error
       }
@@ -575,6 +578,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_LOCALE = "locale"
     const val EXTRA_CALL_TYPE = "callType"
     const val EXTRA_PHONE_NUMBER = "phoneNumber"
+    const val EXTRA_DETECTION_CONTEXT = "detectionContext"
     const val EXTRA_KEYWORDS = "keywords"
 
     const val LISTENING_NOTIFICATION_ID = 7401

@@ -121,6 +121,7 @@ export default function ListeningScreen() {
   const detector = useConversationDetector({
     sensitivity: settings.sensitivity,
     keywords: settings.keywordSets,
+    detectionContext: settings.detectionContext,
     onTrigger: handleTrigger,
   });
 
@@ -152,6 +153,7 @@ export default function ListeningScreen() {
         callType:
           settings.defaultAlert === "tornado" ? null : settings.defaultAlert,
         phoneNumber: settings.userPhoneNumber,
+        detectionContext: settings.detectionContext,
         keywords: settings.keywordSets
           .map((keyword) => keyword.trim())
           .filter(Boolean),
@@ -171,6 +173,7 @@ export default function ListeningScreen() {
     settings.defaultAlert,
     settings.keywordSets,
     settings.userPhoneNumber,
+    settings.detectionContext,
     usesBackgroundService,
   ]);
 

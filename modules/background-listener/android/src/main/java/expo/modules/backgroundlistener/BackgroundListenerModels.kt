@@ -14,6 +14,7 @@ class BackgroundListenerOptions : Record {
   @Field val locale: String = "en-US"
   @Field val callType: String? = null
   @Field val phoneNumber: String = ""
+  @Field val detectionContext: String = ""
   @Field val keywords: List<String> = emptyList()
 }
 
@@ -27,6 +28,7 @@ data class ServiceConfig(
   val locale: String,
   val callType: String?,
   val phoneNumber: String,
+  val detectionContext: String,
   val keywords: List<String>,
 )
 

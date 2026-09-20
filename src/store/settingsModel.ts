@@ -1,4 +1,5 @@
 import { starterCaller } from "@/features/escape/callerProfiles";
+import { DEFAULT_DETECTION_CONTEXT } from "@/shared/detectionContext";
 import { AppSettings, CallerProfile, Sensitivity } from "@/types";
 
 export const initialSettings: AppSettings = {
@@ -10,6 +11,7 @@ export const initialSettings: AppSettings = {
   sensitivity: "medium",
   triggerDelaySeconds: 2,
   keywordSets: ["ai", "big data", "agentic"],
+  detectionContext: DEFAULT_DETECTION_CONTEXT,
   defaultAlert: "mom",
   darkMode: false,
 };
@@ -93,6 +95,7 @@ function fromLegacy(input: LegacySettings): AppSettings {
     sensitivity: input.sensitivity ?? "medium",
     triggerDelaySeconds: input.triggerDelaySeconds ?? 2,
     keywordSets: initialSettings.keywordSets,
+    detectionContext: DEFAULT_DETECTION_CONTEXT,
     defaultAlert: initialSettings.defaultAlert,
     darkMode: false,
   };
@@ -121,6 +124,12 @@ export function migrateSettings(input: unknown): AppSettings {
       ? candidate.userPhoneNumber.trim()
       : "";
 
+  const detectionContext =
+    typeof candidate.detectionContext === "string" &&
+    candidate.detectionContext.trim()
+      ? candidate.detectionContext.trim()
+      : DEFAULT_DETECTION_CONTEXT;
+
   return {
     schemaVersion: 2,
     hasCompletedOnboarding: Boolean(candidate.hasCompletedOnboarding),
@@ -132,6 +141,7 @@ export function migrateSettings(input: unknown): AppSettings {
     keywordSets: Array.isArray(candidate.keywordSets)
       ? candidate.keywordSets.filter((keyword): keyword is string => typeof keyword === "string")
       : initialSettings.keywordSets,
+    detectionContext,
     defaultAlert: candidate.defaultAlert ?? initialSettings.defaultAlert,
     darkMode: Boolean(candidate.darkMode),
   };

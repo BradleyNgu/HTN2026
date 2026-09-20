@@ -7,6 +7,7 @@ export async function classifyTranscript(
   windowId: number,
   signal?: AbortSignal,
   keywords: readonly string[] = [],
+  detectionContext = "",
 ): Promise<ClassificationResponse> {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL;
   if (!apiUrl) {
@@ -22,6 +23,7 @@ export async function classifyTranscript(
       text,
       windowId,
       keywords: keywords.filter((keyword) => keyword.trim().length > 0),
+      context: detectionContext.trim(),
     }),
     signal,
   });

@@ -57,6 +57,13 @@ export default function HomeScreen() {
             <Text style={styles.quickValue}>{settings.keywordSets.join(", ")}</Text>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
+          <Pressable onPress={() => router.push("/detection-context")} style={styles.quickRow}>
+            <Text style={styles.quickTitle}>Context</Text>
+            <Text style={styles.quickValue} numberOfLines={1}>
+              {settings.detectionContext.split("\n")[0] || "Edit detection criteria"}
+            </Text>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
           <Pressable onPress={() => router.push("/default-alert")} style={styles.quickRow}>
             <Text style={styles.quickTitle}>Default alert</Text>
             <Text style={styles.quickValue}>{settings.defaultAlert}</Text>

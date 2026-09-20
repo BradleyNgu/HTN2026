@@ -59,7 +59,11 @@ describe("background listener bridge", () => {
       phoneNumber: "+14155552671",
     };
     expect(startBackgroundListening(options)).toEqual(listeningStatus);
-    expect(native.start).toHaveBeenCalledWith({ ...options, keywords: [] });
+    expect(native.start).toHaveBeenCalledWith({
+      ...options,
+      detectionContext: "",
+      keywords: [],
+    });
   });
 
   it("synchronizes immediately and applies native status events", () => {

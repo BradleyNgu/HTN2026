@@ -8,6 +8,7 @@ class ClassificationClient(private val apiUrl: String) {
   fun classify(
     window: TranscriptWindow,
     keywords: List<String> = emptyList(),
+    detectionContext: String = "",
   ): ClassificationResult {
     require(apiUrl.startsWith("https://") || apiUrl.startsWith("http://")) {
       "A valid classifier URL is required"
@@ -27,6 +28,7 @@ class ClassificationClient(private val apiUrl: String) {
             .put("windowId", window.id)
             .put("text", window.text)
             .put("keywords", org.json.JSONArray(keywords))
+            .put("context", detectionContext)
             .toString(),
         )
       }

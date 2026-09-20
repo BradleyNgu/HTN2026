@@ -16,12 +16,14 @@ import { useSpeechTranscription } from "./useSpeechTranscription";
 type Options = {
   sensitivity: Sensitivity;
   keywords?: readonly string[];
+  detectionContext?: string;
   onTrigger: (reason: string) => void;
 };
 
 export function useConversationDetector({
   sensitivity,
   keywords = [],
+  detectionContext = "",
   onTrigger,
 }: Options) {
   const buffer = useRef(new RollingTranscriptBuffer());
@@ -30,6 +32,7 @@ export function useConversationDetector({
   const abortSpeech = useRef<() => void>(() => undefined);
   const triggerCallback = useRef(onTrigger);
   const keywordsRef = useRef(keywords);
+  const detectionContextRef = useRef(detectionContext);
   const [snapshot, setSnapshot] = useState<DetectorSnapshot>(
     machine.current.snapshot(),
   );
@@ -43,6 +46,10 @@ export function useConversationDetector({
   useEffect(() => {
     keywordsRef.current = keywords;
   }, [keywords]);
+
+  useEffect(() => {
+    detectionContextRef.current = detectionContext;
+  }, [detectionContext]);
 
   const cancelRequests = useCallback(() => {
     controllers.current.forEach((controller) => controller.abort());
@@ -89,6 +96,7 @@ export function useConversationDetector({
           windowId,
           controller.signal,
           keywordsRef.current,
+          detectionContextRef.current,
         );
         handleClassification(result.windowId, result);
       } catch (error) {

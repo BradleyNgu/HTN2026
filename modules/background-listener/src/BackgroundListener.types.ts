@@ -9,6 +9,8 @@ export type BackgroundListenerOptions = {
   callType: "mom" | "boss" | "girlfriend" | null;
   /** E.164 number that should receive the escape call. */
   phoneNumber: string;
+  /** Free-text criteria forwarded to the classifier prompt. */
+  detectionContext?: string;
   keywords?: string[];
 };
 

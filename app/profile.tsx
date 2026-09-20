@@ -11,9 +11,13 @@ import { colors, spacing } from "@/theme";
 export default function ProfileScreen() {
   const { settings } = useSettings();
   const [testCallStatus, setTestCallStatus] = useState("Test real phone call");
+  const contextPreview =
+    settings.detectionContext.split("\n").find((line) => line.trim())?.trim() ||
+    "Edit detection criteria";
   const rows = [
     ["⌕", "Your phone", settings.userPhoneNumber || "Not set", "/phone-setup"],
     ["⌕", "Keyword ", settings.keywordSets.join(", "), "/keyword-sets"],
+    ["✎", "Detection context", contextPreview, "/detection-context"],
     ["♧", "Default alert", settings.defaultAlert === "girlfriend" ? "girlfriend" : settings.defaultAlert, "/default-alert"],
     ["✓", "Ready to listen", "Listening is enabled", "/listening"],
   ] as const;

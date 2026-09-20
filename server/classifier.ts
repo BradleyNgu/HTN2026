@@ -1,22 +1,30 @@
 import OpenAI from "openai";
 
 import {
-  ClassificationResult,
-  classificationSchema,
-} from "./schema";
+  DETECTION_CONTEXT_MAX_LENGTH,
+  resolveDetectionContext,
+} from "../src/shared/detectionContext";
 import {
   findTriggerKeyword,
   keywordTriggerReason,
 } from "../src/shared/triggerKeywords";
+import {
+  ClassificationResult,
+  classificationSchema,
+} from "./schema";
 
-const SYSTEM_PROMPT = `You classify whether a casual in-person conversation has become boring enough that a participant might reasonably want a graceful exit.
+function buildSystemPrompt(detectionContext: string): string {
+  const context = resolveDetectionContext(detectionContext).slice(
+    0,
+    DETECTION_CONTEXT_MAX_LENGTH,
+  );
 
-Mark boring=true when the excerpt includes any of these patterns:
-- Someone is pitching, selling, or repeatedly promoting an idea, product, startup, project, business opportunity, or proposal.
-- A speaker keeps repeating the same point, explanation, story, claim, or question without adding meaningful information.
-- The exchange is repetitive small talk, stalled conversation, perfunctory replies, repeated topics, or a prolonged one-sided monologue.
+  return `You classify whether a casual in-person conversation has become boring enough that a participant might reasonably want a graceful exit.
 
-Treat a clear pitch or repetitive speech as sufficient even if the listener's reaction is not included. A neutral, balanced discussion is not automatically boring.
+Mark boring=true when the excerpt matches any of these user-defined patterns:
+${context}
+
+Treat a clear match as sufficient even if the listener's reaction is not included. A neutral, balanced discussion is not automatically boring.
 
 Safety rules:
 - Always return boring=false for distress, conflict, threats, harassment, medical, legal, or safety-sensitive situations.
@@ -24,15 +32,18 @@ Safety rules:
 - Keep the reason neutral, specific, and under 20 words.
 
 Return only JSON matching the supplied schema.`;
+}
 
 export type Classifier = (
   text: string,
   keywords?: readonly string[],
+  detectionContext?: string,
 ) => Promise<ClassificationResult>;
 
 export const classifyConversation: Classifier = async (
   text,
   keywords = [],
+  detectionContext = "",
 ) => {
   const triggerKeyword = findTriggerKeyword(text, keywords);
   if (triggerKeyword) {
@@ -51,7 +62,7 @@ export const classifyConversation: Classifier = async (
   const completion = await client.chat.completions.create({
     model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(detectionContext) },
       { role: "user", content: text },
     ],
     response_format: {
