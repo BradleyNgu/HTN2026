@@ -4,9 +4,9 @@
     "slug": "conversation-escape",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "conversationescape",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.htn2026.conversationescape",

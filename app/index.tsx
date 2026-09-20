@@ -19,7 +19,7 @@ export default function HomeScreen() {
         <Text style={styles.title}>What's the nonsense{"\n"}around you?</Text>
         <Text style={styles.subtitle}>Hit the STOP button and let TalkBlock get you out of whatever BS you're stuck in.</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Start listening" onPress={() => router.push("/listening")} style={styles.stop}>
-          <Image accessibilityLabel="Stop sign" source={require("../assets/Stop_sign.png")} style={styles.stopImage} />
+          <Image accessibilityLabel="TalkBlock logo" source={require("../assets/icon.png")} style={styles.stopImage} />
         </Pressable>
         {active ? <Pressable onPress={() => stopBackgroundListening()}><Text style={styles.active}>Listening live · tap to stop</Text></Pressable> : null}
       </View>
