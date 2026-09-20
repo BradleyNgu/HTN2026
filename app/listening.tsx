@@ -42,7 +42,7 @@ const phaseLabels = {
   cooldown: "Cooling down",
 };
 
-const SKIP_AD_DURATION_MS = 8000;
+const SKIP_AD_DURATION_MS = 12_000;
 
 export default function ListeningScreen() {
   const { settings } = useSettings();
@@ -55,7 +55,6 @@ export default function ListeningScreen() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipAdCompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingEscapeRef = useRef(false);
-  const startSessionRef = useRef<() => Promise<boolean>>(async () => false);
   const finishSkipAdRef = useRef<() => void>(() => undefined);
   const adOpacity = useRef(new Animated.Value(0)).current;
   const adProgress = useRef(new Animated.Value(0)).current;
@@ -112,15 +111,14 @@ export default function ListeningScreen() {
     tornadoPlayer.play();
   }, [tornadoPlayer, usesBackgroundService]);
 
-  const resetListening = useCallback(async () => {
+  const returnHome = useCallback(() => {
     pendingEscapeRef.current = false;
     setPhoneCallError(null);
     setTriggerReason(null);
     if (usesBackgroundService) {
       stopBackgroundListening();
     }
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    await startSessionRef.current();
+    router.replace("/");
   }, [usesBackgroundService]);
 
   const runConfiguredEscape = useCallback(() => {
@@ -133,13 +131,13 @@ export default function ListeningScreen() {
     if (usesBackgroundService) {
       // Native Android service already requested the Twilio call.
       setTriggerReason("Real phone call requested");
-      void resetListening();
+      returnHome();
       return;
     }
     void triggerConfiguredPhoneCall(callType, settings.userPhoneNumber)
       .then(() => {
         setTriggerReason("Real phone call requested");
-        return resetListening();
+        returnHome();
       })
       .catch((error: unknown) => {
         setPhoneCallError(
@@ -147,11 +145,11 @@ export default function ListeningScreen() {
             ? error.message
             : "The real phone call could not be placed.",
         );
-        void resetListening();
+        returnHome();
       });
   }, [
     presentTornadoWarning,
-    resetListening,
+    returnHome,
     settings.defaultAlert,
     settings.userPhoneNumber,
     usesBackgroundService,
@@ -169,9 +167,11 @@ export default function ListeningScreen() {
       setTriggerReason("Connecting escape…");
       if (shouldEscape) {
         runConfiguredEscape();
+      } else {
+        returnHome();
       }
     });
-  }, [adOpacity, runConfiguredEscape, stopSkipAdAnimation]);
+  }, [adOpacity, returnHome, runConfiguredEscape, stopSkipAdAnimation]);
 
   finishSkipAdRef.current = finishSkipAdAndContinue;
 
@@ -223,10 +223,7 @@ export default function ListeningScreen() {
 
   const startSession = useCallback(async () => {
     if (!caller) return false;
-    if (!usesBackgroundService) {
-      detector.stop();
-      return detector.start();
-    }
+    if (!usesBackgroundService) return detector.start();
     if (getBackgroundListeningStatus().active) return true;
     setBackgroundError(null);
     const granted = await requestBackgroundListeningPermissions();
@@ -278,7 +275,6 @@ export default function ListeningScreen() {
     usesBackgroundService,
   ]);
 
-  startSessionRef.current = startSession;
   useEffect(() => {
     if (!usesBackgroundService) return;
     const subscription = addBackgroundTriggerListener(() => {
