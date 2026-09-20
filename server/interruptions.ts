@@ -60,7 +60,8 @@ export const AUDIO_FILENAMES: Record<PhoneCallType, string> = {
   [PhoneCallType.GIRLFRIEND]: "girlfriend.mp3",
 };
 
-export const RECIPIENT_ENV_NAMES: Record<PhoneCallType, string> = {
+/** Twilio-owned numbers that place the outbound call (From), by alert type. */
+export const CALLER_FROM_ENV_NAMES: Record<PhoneCallType, string> = {
   [PhoneCallType.MOM]: "TWILIO_RECIPIENT_MOM",
   [PhoneCallType.BOSS]: "TWILIO_RECIPIENT_BOSS",
   [PhoneCallType.GIRLFRIEND]: "TWILIO_RECIPIENT_GIRLFRIEND",
@@ -85,38 +86,27 @@ function validateE164(phoneNumber: string, parameterName: string): void {
 }
 
 /**
- * Call `phoneNumber` and play audio chosen by `phoneCallType`.
+ * Place a call from `fromNumber` to `toNumber` and play audio for `phoneCallType`.
  *
  * Resolves to the Twilio call SID. Twilio fetches the selected MP3 from GitHub.
  */
 export async function phoneCall(
   phoneCallType: PhoneCallType,
-  phoneNumber: string,
+  toNumber: string,
+  fromNumber: string,
 ): Promise<string> {
   if (!Object.values(PhoneCallType).includes(phoneCallType)) {
     throw new TypeError("phoneCallType must be a PhoneCallType value.");
   }
-  validateE164(phoneNumber, "phoneNumber");
+  validateE164(toNumber, "toNumber");
+  validateE164(fromNumber, "fromNumber");
   const accountSid = requireEnv("TWILIO_ACCOUNT_SID");
   const authToken = requireEnv("TWILIO_AUTH_TOKEN");
-  loadEnv();
-  // Twilio-owned caller ID (From). Destinations come from TWILIO_RECIPIENT_*.
-  const twilioFromNumber = (
-    process.env.TWILIO_FROM_NUMBER ??
-    process.env.TWILIO_PHONE_NUMBER ??
-    ""
-  ).trim();
-  if (!twilioFromNumber) {
-    throw new Error(
-      "TWILIO_FROM_NUMBER is not set. Add it to .env (see .env.example).",
-    );
-  }
-  validateE164(twilioFromNumber, "TWILIO_FROM_NUMBER");
 
   const audioUrl = `${GITHUB_AUDIO_BASE_URL}/${AUDIO_FILENAMES[phoneCallType]}`;
   const payload = new URLSearchParams({
-    To: phoneNumber,
-    From: twilioFromNumber,
+    To: toNumber,
+    From: fromNumber,
     Twiml: `<Response><Play>${escapeXml(audioUrl)}</Play></Response>`,
   });
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString(
@@ -157,6 +147,8 @@ export async function phoneCall(
 export async function callConfiguredRecipient(
   phoneCallType: PhoneCallType,
 ): Promise<string> {
-  const recipient = requireEnv(RECIPIENT_ENV_NAMES[phoneCallType]);
-  return phoneCall(phoneCallType, recipient);
+  // Mom/Boss/Girlfriend numbers place the call; TEST_PHONE_NUMBER is who rings.
+  const fromNumber = requireEnv(CALLER_FROM_ENV_NAMES[phoneCallType]);
+  const toNumber = requireEnv("TEST_PHONE_NUMBER");
+  return phoneCall(phoneCallType, toNumber, fromNumber);
 }
