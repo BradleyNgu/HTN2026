@@ -76,6 +76,7 @@ export default function ListeningScreen() {
 
   const detector = useConversationDetector({
     sensitivity: settings.sensitivity,
+    keywords: settings.keywordSets,
     onTrigger: handleTrigger,
   });
 
@@ -102,6 +103,9 @@ export default function ListeningScreen() {
         locale: "en-US",
         callType:
           settings.defaultAlert === "tornado" ? null : settings.defaultAlert,
+        keywords: settings.keywordSets
+          .map((keyword) => keyword.trim())
+          .filter(Boolean),
       });
       return true;
     } catch (error) {
@@ -116,6 +120,7 @@ export default function ListeningScreen() {
     settings.sensitivity,
     settings.triggerDelaySeconds,
     settings.defaultAlert,
+    settings.keywordSets,
     usesBackgroundService,
   ]);
 
@@ -187,19 +192,22 @@ export default function ListeningScreen() {
         <View style={styles.progressCard}>
           <Text style={styles.progressLabel}>DETECTION CHECKS</Text>
           <View style={styles.checks}>
-            {[0, 1].map((index) => (
+            {[0].map((index) => (
               <View
                 key={index}
                 style={[
                   styles.check,
-                  index < detector.consecutivePositive &&
+                  (usesBackgroundService
+                    ? backgroundStatus.phase === "evaluating" ||
+                      backgroundStatus.phase === "triggered"
+                    : detector.consecutivePositive > index) &&
                     styles.checkActive,
                 ]}
               />
             ))}
           </View>
           <Text style={styles.progressCopy}>
-            Two confident checks are required before Twilio places the call.
+            One confident 10-word check triggers the Twilio call.
           </Text>
         </View>
 

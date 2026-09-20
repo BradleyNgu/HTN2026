@@ -15,21 +15,19 @@ const negative = {
 } as const;
 
 describe("DetectorMachine", () => {
-  it("requires two consecutive positive results", () => {
+  it("triggers after one confident positive result", () => {
     const machine = new DetectorMachine("medium");
     machine.start(0);
-    expect(machine.apply(1, positive, 1).snapshot.phase).toBe("suspected");
-    const second = machine.apply(2, positive, 2);
-    expect(second.triggered).toBe(true);
-    expect(second.snapshot.phase).toBe("triggered");
+    const first = machine.apply(1, positive, 1);
+    expect(first.triggered).toBe(true);
+    expect(first.snapshot.phase).toBe("triggered");
   });
 
-  it("resets its evidence after a negative result", () => {
+  it("does not trigger on a negative result", () => {
     const machine = new DetectorMachine("medium");
     machine.start(0);
-    machine.apply(1, positive, 1);
-    expect(machine.apply(2, negative, 2).snapshot.consecutivePositive).toBe(0);
-    expect(machine.apply(3, positive, 3).triggered).toBe(false);
+    expect(machine.apply(1, negative, 1).triggered).toBe(false);
+    expect(machine.apply(1, negative, 1).snapshot.consecutivePositive).toBe(0);
   });
 
   it("discards stale responses", () => {
@@ -38,7 +36,7 @@ describe("DetectorMachine", () => {
     machine.apply(2, positive, 1);
     const stale = machine.apply(1, positive, 2);
     expect(stale.stale).toBe(true);
-    expect(stale.snapshot.consecutivePositive).toBe(1);
+    expect(stale.triggered).toBe(false);
   });
 
   it("enters cooldown after a trigger", () => {

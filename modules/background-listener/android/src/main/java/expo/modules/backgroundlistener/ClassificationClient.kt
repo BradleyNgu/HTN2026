@@ -5,7 +5,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 class ClassificationClient(private val apiUrl: String) {
-  fun classify(window: TranscriptWindow): ClassificationResult {
+  fun classify(
+    window: TranscriptWindow,
+    keywords: List<String> = emptyList(),
+  ): ClassificationResult {
     require(apiUrl.startsWith("https://") || apiUrl.startsWith("http://")) {
       "A valid classifier URL is required"
     }
@@ -23,6 +26,7 @@ class ClassificationClient(private val apiUrl: String) {
           JSONObject()
             .put("windowId", window.id)
             .put("text", window.text)
+            .put("keywords", org.json.JSONArray(keywords))
             .toString(),
         )
       }
@@ -62,7 +66,18 @@ class ClassificationClient(private val apiUrl: String) {
         writer.write(JSONObject().put("callType", callType).toString())
       }
       if (connection.responseCode !in 200..299) {
-        throw IllegalStateException("Call endpoint returned HTTP ${connection.responseCode}")
+        val responseBody = connection.errorStream
+          ?.bufferedReader(Charsets.UTF_8)
+          ?.use { it.readText() }
+          .orEmpty()
+        val serverError = try {
+          JSONObject(responseBody).optString("error").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+          null
+        }
+        throw IllegalStateException(
+          serverError ?: "Call endpoint returned HTTP ${connection.responseCode}",
+        )
       }
     } finally {
       connection.disconnect()

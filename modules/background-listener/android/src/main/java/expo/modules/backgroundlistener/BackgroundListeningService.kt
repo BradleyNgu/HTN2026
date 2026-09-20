@@ -78,6 +78,10 @@ class BackgroundListeningService : Service(), RecognitionListener {
       locale = intent.getStringExtra(EXTRA_LOCALE).orEmpty().ifBlank { "en-US" },
       callType = intent.getStringExtra(EXTRA_CALL_TYPE)
         ?.takeIf { it in setOf("mom", "boss", "girlfriend") },
+      keywords = intent.getStringArrayListExtra(EXTRA_KEYWORDS)
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        .orEmpty(),
     )
     gate = DetectionGate(config!!.sensitivity)
     stopping = false
@@ -162,7 +166,10 @@ class BackgroundListeningService : Service(), RecognitionListener {
     wordsHeard += delta.trim().split(Regex("\\s+")).size
     val window = transcript.add(delta)
     updateStatus(true, "listening")
-    val keyword = ImmediateKeywords.find(transcript.recentText())
+    val keyword = ImmediateKeywords.find(
+      transcript.recentText(),
+      config?.keywords.orEmpty(),
+    )
     if (keyword != null && gate.triggerImmediately()) {
       trigger("Detected “$keyword” locally")
       return
@@ -176,7 +183,11 @@ class BackgroundListeningService : Service(), RecognitionListener {
     updateStatus(true, "evaluating")
     classifierExecutor.execute {
       try {
-        val result = classifyWithRetry(ClassificationClient(serviceConfig.apiUrl), window)
+        val result = classifyWithRetry(
+          ClassificationClient(serviceConfig.apiUrl),
+          window,
+          serviceConfig.keywords,
+        )
         mainHandler.post {
           if (!stopping && !triggered) {
             if (gate.apply(window.id, result)) {
@@ -199,12 +210,13 @@ class BackgroundListeningService : Service(), RecognitionListener {
   private fun classifyWithRetry(
     client: ClassificationClient,
     window: TranscriptWindow,
+    keywords: List<String>,
   ): ClassificationResult {
     var lastError: Exception? = null
     repeat(2) { attempt ->
       if (attempt > 0) TimeUnit.MILLISECONDS.sleep(1_000)
       try {
-        return client.classify(window)
+        return client.classify(window, keywords)
       } catch (error: Exception) {
         lastError = error
       }
@@ -242,8 +254,14 @@ class BackgroundListeningService : Service(), RecognitionListener {
     classifierExecutor.execute {
       try {
         ClassificationClient(serviceConfig.apiUrl).triggerCall(callType)
-      } catch (_: Exception) {
-        // A failed Twilio attempt still stops the completed listening session.
+      } catch (error: Exception) {
+        mainHandler.post {
+          updateStatus(
+            false,
+            "error",
+            "Phone call failed: ${error.message ?: "network request failed"}",
+          )
+        }
       } finally {
         mainHandler.post {
           callRequestFinished = true
@@ -442,6 +460,7 @@ class BackgroundListeningService : Service(), RecognitionListener {
     const val EXTRA_API_URL = "apiUrl"
     const val EXTRA_LOCALE = "locale"
     const val EXTRA_CALL_TYPE = "callType"
+    const val EXTRA_KEYWORDS = "keywords"
 
     const val LISTENING_NOTIFICATION_ID = 7401
     private const val LISTENING_CHANNEL_ID = "background-listening"

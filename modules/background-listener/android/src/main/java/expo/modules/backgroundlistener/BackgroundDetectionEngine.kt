@@ -9,8 +9,8 @@ data class TranscriptWindow(
 )
 
 class TranscriptAccumulator(
-  private val windowSize: Int = 50,
-  private val stride: Int = 20,
+  private val windowSize: Int = 10,
+  private val stride: Int = 10,
   private val maxWords: Int = 120,
 ) {
   private val words = mutableListOf<String>()
@@ -65,15 +65,33 @@ class TranscriptAccumulator(
 }
 
 object ImmediateKeywords {
-  private val triggers = listOf(
-    "physical intelligence" to Regex("\\bphysical\\s+intelligence\\b", RegexOption.IGNORE_CASE),
-    "big data" to Regex("\\bbig\\s+data\\b", RegexOption.IGNORE_CASE),
-    "blockchain" to Regex("\\bblockchain\\b", RegexOption.IGNORE_CASE),
-    "web3" to Regex("\\bweb\\s*3\\b", RegexOption.IGNORE_CASE),
-    "AI" to Regex("\\bai\\b", RegexOption.IGNORE_CASE),
-  )
+  fun find(text: String, keywords: List<String>): String? {
+    for (keyword in normalize(keywords)) {
+      if (patternFor(keyword).containsMatchIn(text)) return keyword
+    }
+    return null
+  }
 
-  fun find(text: String): String? = triggers.firstOrNull { it.second.containsMatchIn(text) }?.first
+  private fun normalize(keywords: List<String>): List<String> {
+    val seen = linkedSetOf<String>()
+    val normalized = mutableListOf<String>()
+    for (keyword in keywords) {
+      val label = keyword.trim().replace(Regex("\\s+"), " ")
+      if (label.isEmpty()) continue
+      val key = label.lowercase(Locale.US)
+      if (!seen.add(key)) continue
+      normalized.add(label)
+    }
+    return normalized
+  }
+
+  private fun patternFor(keyword: String): Regex {
+    val escaped = keyword
+      .split(Regex("\\s+"))
+      .filter { it.isNotEmpty() }
+      .joinToString("\\s+") { Regex.escape(it) }
+    return Regex("\\b$escaped\\b", RegexOption.IGNORE_CASE)
+  }
 }
 
 data class ClassificationResult(
@@ -84,7 +102,7 @@ data class ClassificationResult(
 
 class DetectionGate(
   sensitivity: String,
-  private val requiredPositives: Int = 2,
+  private val requiredPositives: Int = 1,
   private val cooldownMs: Long = 120_000,
 ) {
   private val threshold = when (sensitivity.lowercase(Locale.US)) {

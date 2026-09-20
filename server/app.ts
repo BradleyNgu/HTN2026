@@ -63,7 +63,10 @@ export function createApp(
       }
 
       try {
-        const result = await classifier(parsed.data.text);
+        const result = await classifier(
+          parsed.data.text,
+          parsed.data.keywords,
+        );
         response.setHeader("Cache-Control", "no-store");
         response.json({ windowId: parsed.data.windowId, ...result });
       } catch (error) {

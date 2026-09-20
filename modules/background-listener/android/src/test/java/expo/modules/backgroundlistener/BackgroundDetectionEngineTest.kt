@@ -8,44 +8,45 @@ import org.junit.jupiter.api.Test
 
 class BackgroundDetectionEngineTest {
   @Test
-  fun `rolling transcript emits 50 words then advances by 20`() {
+  fun `rolling transcript emits 10 words then advances by 10`() {
     val accumulator = TranscriptAccumulator()
-    assertNull(accumulator.add(words(1, 49)))
-    val first = accumulator.add("word50")
-    assertEquals(50, first?.text?.split(" ")?.size)
-    assertNull(accumulator.add(words(51, 69)))
-    val second = accumulator.add("word70")
+    assertNull(accumulator.add(words(1, 9)))
+    val first = accumulator.add("word10")
+    assertEquals(10, first?.text?.split(" ")?.size)
+    assertNull(accumulator.add(words(11, 19)))
+    val second = accumulator.add("word20")
     assertEquals(2, second?.id)
-    assertTrue(second?.text?.startsWith("word21") == true)
+    assertTrue(second?.text?.startsWith("word11") == true)
   }
 
   @Test
-  fun `keyword matching respects word boundaries and flexible spaces`() {
-    assertEquals("AI", ImmediateKeywords.find("we should discuss AI today"))
-    assertEquals("web3", ImmediateKeywords.find("the web 3 proposal"))
+  fun `keyword matching uses the configured keyword list`() {
+    val keywords = listOf("AI", "big data", "web3", "physical intelligence", "blockchain")
+    assertEquals("AI", ImmediateKeywords.find("we should discuss AI today", keywords))
+    assertEquals("web3", ImmediateKeywords.find("the web3 proposal", keywords))
     assertEquals(
       "physical intelligence",
-      ImmediateKeywords.find("physical   intelligence systems"),
+      ImmediateKeywords.find("physical   intelligence systems", keywords),
     )
-    assertNull(ImmediateKeywords.find("the chair is comfortable"))
-    assertNull(ImmediateKeywords.find("blockchainish is not the keyword"))
+    assertNull(ImmediateKeywords.find("the chair is comfortable", keywords))
+    assertNull(ImmediateKeywords.find("blockchainish is not the keyword", keywords))
+    assertNull(ImmediateKeywords.find("we should discuss blockchain today", listOf("AI")))
   }
 
   @Test
-  fun `gate requires two confident positives`() {
+  fun `gate triggers on one confident positive`() {
     val gate = DetectionGate("medium")
     val positive = ClassificationResult(true, 0.8, "slow")
-    assertFalse(gate.apply(1, positive, 1_000))
-    assertTrue(gate.apply(2, positive, 2_000))
+    assertTrue(gate.apply(1, positive, 1_000))
   }
 
   @Test
   fun `gate ignores stale response ordering and enforces cooldown`() {
     val gate = DetectionGate("high", cooldownMs = 1_000)
     val positive = ClassificationResult(true, 0.9, "slow")
-    assertFalse(gate.apply(2, positive, 1_000))
+    assertTrue(gate.apply(2, positive, 1_000))
     assertFalse(gate.apply(1, positive, 1_100))
-    assertTrue(gate.apply(3, positive, 1_200))
+    assertFalse(gate.apply(3, positive, 1_200))
     assertFalse(gate.triggerImmediately(1_500))
     assertTrue(gate.triggerImmediately(2_201))
   }

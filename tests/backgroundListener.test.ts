@@ -58,7 +58,7 @@ describe("background listener bridge", () => {
       callType: "mom" as const,
     };
     expect(startBackgroundListening(options)).toEqual(listeningStatus);
-    expect(native.start).toHaveBeenCalledWith(options);
+    expect(native.start).toHaveBeenCalledWith({ ...options, keywords: [] });
   });
 
   it("synchronizes immediately and applies native status events", () => {
