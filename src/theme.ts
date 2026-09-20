@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Appearance, Platform } from "react-native";
 
 const storedDarkModePreference = Platform.OS === "web" && typeof localStorage !== "undefined"
   ? localStorage.getItem("conversation-escape.dark-mode")
@@ -32,7 +32,9 @@ const darkColors = {
   black: "#101010",
 } as const;
 
-export const isDarkMode = storedDarkModePreference === "true";
+export const isDarkMode = Platform.OS === "web"
+  ? storedDarkModePreference === "true"
+  : Appearance.getColorScheme() === "dark";
 
 export const colors = isDarkMode ? darkColors : lightColors;
 

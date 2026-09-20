@@ -1,6 +1,6 @@
 import { router, usePathname } from "expo-router";
 import React from "react";
-import { Alert, Appearance, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Appearance, DevSettings, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
 import { useSettings } from "@/store/SettingsContext";
@@ -17,6 +17,7 @@ export function TalkBlockHeader({ title }: { title?: string }) {
         setColorScheme?: (scheme: "light" | "dark") => void;
       }).setColorScheme;
       setColorScheme?.(value ? "dark" : "light");
+      DevSettings.reload();
     }
     if (Platform.OS === "web" && typeof localStorage !== "undefined") {
       localStorage.setItem("conversation-escape.dark-mode", String(value));
