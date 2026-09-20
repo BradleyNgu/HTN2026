@@ -1,8 +1,10 @@
 import * as Haptics from "expo-haptics";
+import { useAudioPlayer } from "expo-audio";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TalkBlockHeader } from "@/components/TalkBlockChrome";
 import {
+  addBackgroundTriggerListener,
   getBackgroundListeningStatus,
   isBackgroundListeningSupported,
   requestBackgroundListeningPermissions,
@@ -41,26 +44,42 @@ export default function ListeningScreen() {
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [phoneCallError, setPhoneCallError] = useState<string | null>(null);
+  const [tornadoWarningVisible, setTornadoWarningVisible] = useState(false);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tornadoPlayer = useAudioPlayer(require("../audio/alert.mp3"));
   const caller = getSelectedCaller(settings);
   const backgroundStatus = useBackgroundListenerStatus();
   const usesBackgroundService =
     Platform.OS === "android" && isBackgroundListeningSupported;
 
+  const presentTornadoWarning = useCallback(async () => {
+    setTriggerReason("Tornado warning issued");
+    setTornadoWarningVisible(true);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    await tornadoPlayer.seekTo(0);
+    tornadoPlayer.play();
+  }, [tornadoPlayer]);
+
   const handleTrigger = useCallback(
     (reason: string) => {
-      setTriggerReason(`${reason} · requesting a real phone call`);
+      const callType = settings.defaultAlert;
+      const isTornado = callType === "tornado";
+      setTriggerReason(
+        isTornado
+          ? `${reason} · preparing tornado warning`
+          : `${reason} · requesting a real phone call`,
+      );
       setPhoneCallError(null);
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Warning,
       );
       timer.current = setTimeout(() => {
-        if (settings.defaultAlert === "tornado") {
-          setPhoneCallError("Tornado alerts do not place a phone call.");
+        if (callType === "tornado") {
+          void presentTornadoWarning();
           return;
         }
-        void triggerConfiguredPhoneCall(settings.defaultAlert)
+        void triggerConfiguredPhoneCall(callType)
           .then(() => setTriggerReason("Real phone call requested"))
           .catch((error: unknown) => {
             setPhoneCallError(
@@ -71,7 +90,11 @@ export default function ListeningScreen() {
           });
       }, settings.triggerDelaySeconds * 1000);
     },
-    [settings.defaultAlert, settings.triggerDelaySeconds],
+    [
+      presentTornadoWarning,
+      settings.defaultAlert,
+      settings.triggerDelaySeconds,
+    ],
   );
 
   const detector = useConversationDetector({
@@ -125,18 +148,36 @@ export default function ListeningScreen() {
   ]);
 
   useEffect(() => {
+    if (!usesBackgroundService || settings.defaultAlert !== "tornado") return;
+    const subscription = addBackgroundTriggerListener(() => {
+      timer.current = setTimeout(
+        () => void presentTornadoWarning(),
+        settings.triggerDelaySeconds * 1000,
+      );
+    });
+    return () => subscription?.remove();
+  }, [
+    presentTornadoWarning,
+    settings.defaultAlert,
+    settings.triggerDelaySeconds,
+    usesBackgroundService,
+  ]);
+
+  useEffect(() => {
     if (!started.current) {
       started.current = true;
       if (caller) void startSession();
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
+      tornadoPlayer.pause();
     };
     // Android intentionally keeps its native service alive after this screen unmounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopSession = () => {
+    tornadoPlayer.pause();
     if (usesBackgroundService) {
       stopBackgroundListening();
     } else {
@@ -156,7 +197,9 @@ export default function ListeningScreen() {
     : phoneCallError ?? detector.error;
   const statusLabel = usesBackgroundService
     ? backgroundStatus.phase === "triggered"
-      ? "Real phone call requested"
+      ? settings.defaultAlert === "tornado"
+        ? "Tornado warning issued"
+        : "Real phone call requested"
       : backgroundStatus.phase === "reconnecting"
         ? "Reconnecting speech recognition"
         : backgroundStatus.phase === "evaluating"
@@ -168,6 +211,36 @@ export default function ListeningScreen() {
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => {
+          tornadoPlayer.pause();
+          setTornadoWarningVisible(false);
+        }}
+        transparent
+        visible={tornadoWarningVisible}
+      >
+        <View style={styles.warningBackdrop}>
+          <View style={styles.warningCard}>
+            <Text style={styles.warningEyebrow}>EMERGENCY ALERT</Text>
+            <Text style={styles.warningTitle}>Tornado Warning</Text>
+            <Text style={styles.warningBody}>
+              A tornado warning has been issued for your area. Seek shelter
+              immediately in a basement or an interior room away from windows.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                tornadoPlayer.pause();
+                setTornadoWarningVisible(false);
+              }}
+              style={styles.warningDismiss}
+            >
+              <Text style={styles.warningDismissText}>Dismiss</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       <TalkBlockHeader />
       <View style={styles.content}>
         <Text style={styles.eyebrow}>LIVE <Text style={styles.liveDot}>●</Text></Text>
@@ -207,7 +280,7 @@ export default function ListeningScreen() {
             ))}
           </View>
           <Text style={styles.progressCopy}>
-            One confident 10-word check triggers the Twilio call.
+            One confident 10-word check triggers the configured alert.
           </Text>
         </View>
 
@@ -336,4 +409,55 @@ const styles = StyleSheet.create({
   },
   panicTitle: { color: colors.primary, fontSize: 16, fontWeight: "700" },
   panicBody: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  warningBackdrop: {
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.88)",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  warningCard: {
+    backgroundColor: "#FFFFFF",
+    borderColor: "#111111",
+    borderRadius: radius.md,
+    borderWidth: 4,
+    padding: spacing.lg,
+    width: "100%",
+  },
+  warningEyebrow: {
+    backgroundColor: "#111111",
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1.8,
+    padding: spacing.sm,
+    textAlign: "center",
+  },
+  warningTitle: {
+    color: "#111111",
+    fontSize: 32,
+    fontWeight: "900",
+    marginTop: spacing.lg,
+    textAlign: "center",
+  },
+  warningBody: {
+    color: "#111111",
+    fontSize: 17,
+    lineHeight: 25,
+    marginTop: spacing.md,
+    textAlign: "center",
+  },
+  warningDismiss: {
+    alignItems: "center",
+    backgroundColor: "#111111",
+    borderRadius: radius.sm,
+    marginTop: spacing.lg,
+    minHeight: 50,
+    justifyContent: "center",
+  },
+  warningDismissText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+  },
 });

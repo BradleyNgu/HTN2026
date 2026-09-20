@@ -60,6 +60,12 @@ export const AUDIO_FILENAMES: Record<PhoneCallType, string> = {
   [PhoneCallType.GIRLFRIEND]: "girlfriend.mp3",
 };
 
+export const RECIPIENT_ENV_NAMES: Record<PhoneCallType, string> = {
+  [PhoneCallType.MOM]: "TWILIO_RECIPIENT_MOM",
+  [PhoneCallType.BOSS]: "TWILIO_RECIPIENT_BOSS",
+  [PhoneCallType.GIRLFRIEND]: "TWILIO_RECIPIENT_GIRLFRIEND",
+};
+
 export const GITHUB_AUDIO_BASE_URL =
   "https://raw.githubusercontent.com/BradleyNgu/HTN2026/interruptions/audio";
 
@@ -140,6 +146,6 @@ export async function phoneCall(
 export async function callConfiguredRecipient(
   phoneCallType: PhoneCallType,
 ): Promise<string> {
-  const recipient = requireEnv("TEST_PHONE_NUMBER");
+  const recipient = requireEnv(RECIPIENT_ENV_NAMES[phoneCallType]);
   return phoneCall(phoneCallType, recipient);
 }
