@@ -51,11 +51,12 @@ export default function ListeningScreen() {
   const [phoneCallError, setPhoneCallError] = useState<string | null>(null);
   const [tornadoWarningVisible, setTornadoWarningVisible] = useState(false);
   const [skipAdVisible, setSkipAdVisible] = useState(false);
-  const [skipAdReady, setSkipAdReady] = useState(false);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const skipAdReadyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipAdCompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingEscapeRef = useRef(false);
+  const startSessionRef = useRef<() => Promise<boolean>>(async () => false);
+  const finishSkipAdRef = useRef<() => void>(() => undefined);
   const adOpacity = useRef(new Animated.Value(0)).current;
   const adProgress = useRef(new Animated.Value(0)).current;
   const tornadoPlayer = useAudioPlayer(require("../audio/alert.mp3"));
@@ -64,35 +65,33 @@ export default function ListeningScreen() {
   const usesBackgroundService =
     Platform.OS === "android" && isBackgroundListeningSupported;
 
-  const leaveAppAfterTornado = useCallback(() => {
-    router.replace("/");
-    if (Platform.OS === "android") {
-      BackHandler.exitApp();
+  const stopSkipAdAnimation = useCallback(() => {
+    if (skipAdCompleteTimer.current) {
+      clearTimeout(skipAdCompleteTimer.current);
+      skipAdCompleteTimer.current = null;
     }
-  }, []);
+    adOpacity.stopAnimation();
+    adProgress.stopAnimation();
+    setSkipAdVisible(false);
+    adOpacity.setValue(0);
+    adProgress.setValue(0);
+  }, [adOpacity, adProgress]);
 
   const dismissTornadoWarning = useCallback(() => {
     tornadoPlayer.loop = false;
     tornadoPlayer.pause();
     if (usesBackgroundService) {
       dismissBackgroundTornadoAlert();
+      stopBackgroundListening();
     }
     setTornadoWarningVisible(false);
-    leaveAppAfterTornado();
-  }, [leaveAppAfterTornado, tornadoPlayer, usesBackgroundService]);
-
-  const stopSkipAdAnimation = useCallback(() => {
-    if (skipAdReadyTimer.current) {
-      clearTimeout(skipAdReadyTimer.current);
-      skipAdReadyTimer.current = null;
+    // Leave the app so the tornado gag feels final.
+    if (Platform.OS === "android") {
+      BackHandler.exitApp();
+      return;
     }
-    adOpacity.stopAnimation();
-    adProgress.stopAnimation();
-    setSkipAdVisible(false);
-    setSkipAdReady(false);
-    adOpacity.setValue(0);
-    adProgress.setValue(0);
-  }, [adOpacity, adProgress]);
+    router.replace("/");
+  }, [tornadoPlayer, usesBackgroundService]);
 
   const presentTornadoWarning = useCallback(async () => {
     setTriggerReason("Tornado warning issued");
@@ -113,6 +112,17 @@ export default function ListeningScreen() {
     tornadoPlayer.play();
   }, [tornadoPlayer, usesBackgroundService]);
 
+  const resetListening = useCallback(async () => {
+    pendingEscapeRef.current = false;
+    setPhoneCallError(null);
+    setTriggerReason(null);
+    if (usesBackgroundService) {
+      stopBackgroundListening();
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await startSessionRef.current();
+  }, [usesBackgroundService]);
+
   const runConfiguredEscape = useCallback(() => {
     const callType = settings.defaultAlert;
     setPhoneCallError(null);
@@ -123,26 +133,31 @@ export default function ListeningScreen() {
     if (usesBackgroundService) {
       // Native Android service already requested the Twilio call.
       setTriggerReason("Real phone call requested");
+      void resetListening();
       return;
     }
     void triggerConfiguredPhoneCall(callType, settings.userPhoneNumber)
-      .then(() => setTriggerReason("Real phone call requested"))
+      .then(() => {
+        setTriggerReason("Real phone call requested");
+        return resetListening();
+      })
       .catch((error: unknown) => {
         setPhoneCallError(
           error instanceof Error
             ? error.message
             : "The real phone call could not be placed.",
         );
+        void resetListening();
       });
   }, [
     presentTornadoWarning,
+    resetListening,
     settings.defaultAlert,
     settings.userPhoneNumber,
     usesBackgroundService,
   ]);
 
   const finishSkipAdAndContinue = useCallback(() => {
-    if (!skipAdReady) return;
     const shouldEscape = pendingEscapeRef.current;
     pendingEscapeRef.current = false;
     Animated.timing(adOpacity, {
@@ -156,12 +171,13 @@ export default function ListeningScreen() {
         runConfiguredEscape();
       }
     });
-  }, [adOpacity, runConfiguredEscape, skipAdReady, stopSkipAdAnimation]);
+  }, [adOpacity, runConfiguredEscape, stopSkipAdAnimation]);
+
+  finishSkipAdRef.current = finishSkipAdAndContinue;
 
   const presentSkipAd = useCallback(async () => {
     setTriggerReason("Sponsored interruption");
     setSkipAdVisible(true);
-    setSkipAdReady(false);
     adOpacity.setValue(0);
     adProgress.setValue(0);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -177,9 +193,9 @@ export default function ListeningScreen() {
       useNativeDriver: false,
     }).start();
 
-    if (skipAdReadyTimer.current) clearTimeout(skipAdReadyTimer.current);
-    skipAdReadyTimer.current = setTimeout(() => {
-      setSkipAdReady(true);
+    if (skipAdCompleteTimer.current) clearTimeout(skipAdCompleteTimer.current);
+    skipAdCompleteTimer.current = setTimeout(() => {
+      finishSkipAdRef.current();
     }, SKIP_AD_DURATION_MS);
   }, [adOpacity, adProgress]);
 
@@ -207,7 +223,10 @@ export default function ListeningScreen() {
 
   const startSession = useCallback(async () => {
     if (!caller) return false;
-    if (!usesBackgroundService) return detector.start();
+    if (!usesBackgroundService) {
+      detector.stop();
+      return detector.start();
+    }
     if (getBackgroundListeningStatus().active) return true;
     setBackgroundError(null);
     const granted = await requestBackgroundListeningPermissions();
@@ -259,6 +278,7 @@ export default function ListeningScreen() {
     usesBackgroundService,
   ]);
 
+  startSessionRef.current = startSession;
   useEffect(() => {
     if (!usesBackgroundService) return;
     const subscription = addBackgroundTriggerListener(() => {
@@ -306,13 +326,16 @@ export default function ListeningScreen() {
 
   const stopSession = () => {
     pendingEscapeRef.current = false;
-    dismissTornadoWarning();
-    stopSkipAdAnimation();
+    tornadoPlayer.loop = false;
+    tornadoPlayer.pause();
     if (usesBackgroundService) {
+      dismissBackgroundTornadoAlert();
       stopBackgroundListening();
     } else {
       detector.stop();
     }
+    setTornadoWarningVisible(false);
+    stopSkipAdAnimation();
     router.replace("/");
   };
 
@@ -389,9 +412,7 @@ export default function ListeningScreen() {
         visible={skipAdVisible}
       >
         <Animated.View style={[styles.adBackdrop, { opacity: adOpacity }]}>
-          <Animated.View
-            style={[styles.adPlayer, { transform: [{ scale: adPulse }] }]}
-          >
+          <View style={styles.adPlayer}>
             <View style={styles.adStage}>
               <Text style={styles.adEyebrow}>Sponsored</Text>
               <Text style={styles.adHeadline}>
@@ -419,7 +440,7 @@ export default function ListeningScreen() {
                 </View>
               </View>
             </View>
-          </Animated.View>
+          </View>
         </Animated.View>
       </Modal>
 
