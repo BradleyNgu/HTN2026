@@ -1,11 +1,8 @@
 import * as Haptics from "expo-haptics";
-import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
-  BackHandler,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -28,6 +25,10 @@ import {
 import { useBackgroundListenerStatus } from "@/features/background/useBackgroundListenerStatus";
 import { getSelectedCaller } from "@/features/escape/callerProfiles";
 import { triggerConfiguredPhoneCall } from "@/features/escape/phoneCallClient";
+import {
+  TornadoWarningModal,
+  useTornadoInterrupt,
+} from "@/features/escape/TornadoInterrupt";
 import { useConversationDetector } from "@/features/listening/useConversationDetector";
 import { useSettings } from "@/store/SettingsContext";
 import { isPhoneAlert } from "@/types";
@@ -49,7 +50,6 @@ export default function ListeningScreen() {
   const [triggerReason, setTriggerReason] = useState<string | null>(null);
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [phoneCallError, setPhoneCallError] = useState<string | null>(null);
-  const [tornadoWarningVisible, setTornadoWarningVisible] = useState(false);
   const [skipAdVisible, setSkipAdVisible] = useState(false);
   const started = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,11 +58,19 @@ export default function ListeningScreen() {
   const finishSkipAdRef = useRef<() => void>(() => undefined);
   const adOpacity = useRef(new Animated.Value(0)).current;
   const adProgress = useRef(new Animated.Value(0)).current;
-  const tornadoPlayer = useAudioPlayer(require("../audio/alert.mp3"));
   const caller = getSelectedCaller(settings);
   const backgroundStatus = useBackgroundListenerStatus();
   const usesBackgroundService =
     Platform.OS === "android" && isBackgroundListeningSupported;
+  const tornado = useTornadoInterrupt({
+    skipLocalAudio: usesBackgroundService,
+    onBeforeDismiss: useCallback(() => {
+      if (usesBackgroundService) {
+        dismissBackgroundTornadoAlert();
+        stopBackgroundListening();
+      }
+    }, [usesBackgroundService]),
+  });
 
   const stopSkipAdAnimation = useCallback(() => {
     if (skipAdCompleteTimer.current) {
@@ -76,40 +84,10 @@ export default function ListeningScreen() {
     adProgress.setValue(0);
   }, [adOpacity, adProgress]);
 
-  const dismissTornadoWarning = useCallback(() => {
-    tornadoPlayer.loop = false;
-    tornadoPlayer.pause();
-    if (usesBackgroundService) {
-      dismissBackgroundTornadoAlert();
-      stopBackgroundListening();
-    }
-    setTornadoWarningVisible(false);
-    // Leave the app so the tornado gag feels final.
-    if (Platform.OS === "android") {
-      BackHandler.exitApp();
-      return;
-    }
-    router.replace("/");
-  }, [tornadoPlayer, usesBackgroundService]);
-
   const presentTornadoWarning = useCallback(async () => {
     setTriggerReason("Tornado warning issued");
-    setTornadoWarningVisible(true);
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    // Android background service plays the alarm even when the app is closed.
-    if (usesBackgroundService) return;
-    await setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: "doNotMix",
-      shouldPlayInBackground: false,
-      shouldRouteThroughEarpiece: false,
-      allowsRecording: false,
-    });
-    tornadoPlayer.volume = 1;
-    tornadoPlayer.loop = true;
-    await tornadoPlayer.seekTo(0);
-    tornadoPlayer.play();
-  }, [tornadoPlayer, usesBackgroundService]);
+    await tornado.present();
+  }, [tornado.present]);
 
   const returnHome = useCallback(() => {
     pendingEscapeRef.current = false;
@@ -310,7 +288,7 @@ export default function ListeningScreen() {
       !usesBackgroundService ||
       backgroundStatus.phase !== "triggered" ||
       skipAdVisible ||
-      tornadoWarningVisible
+      tornado.visible
     ) {
       return;
     }
@@ -326,7 +304,7 @@ export default function ListeningScreen() {
     presentTornadoWarning,
     settings.defaultAlert,
     skipAdVisible,
-    tornadoWarningVisible,
+    tornado.visible,
     usesBackgroundService,
   ]);
 
@@ -338,8 +316,7 @@ export default function ListeningScreen() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
       if (skipAdCompleteTimer.current) clearTimeout(skipAdCompleteTimer.current);
-      tornadoPlayer.loop = false;
-      tornadoPlayer.pause();
+      tornado.stopAudio();
     };
     // Android intentionally keeps its native service alive after this screen unmounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -347,15 +324,13 @@ export default function ListeningScreen() {
 
   const stopSession = () => {
     pendingEscapeRef.current = false;
-    tornadoPlayer.loop = false;
-    tornadoPlayer.pause();
+    tornado.stopAudio();
     if (usesBackgroundService) {
       dismissBackgroundTornadoAlert();
       stopBackgroundListening();
     } else {
       detector.stop();
     }
-    setTornadoWarningVisible(false);
     stopSkipAdAnimation();
     router.replace("/");
   };
@@ -392,40 +367,7 @@ export default function ListeningScreen() {
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safe}>
-      <Modal
-        animationType="fade"
-        onRequestClose={dismissTornadoWarning}
-        transparent
-        visible={tornadoWarningVisible}
-      >
-        <View style={styles.warningBackdrop}>
-          <View style={styles.warningCard}>
-            <View style={styles.warningHeader}>
-              <View style={styles.warningIconWrap}>
-                <View style={styles.warningTriangle} />
-                <Text style={styles.warningIconMark}>!</Text>
-              </View>
-              <Text style={styles.warningHeaderTitle}>
-                Severe weather (Tornado warning)
-              </Text>
-            </View>
-            <Text style={styles.warningTitle}>Emergency Alert</Text>
-            <Text style={styles.warningBody}>
-              A tornado warning has been issued for your area. Seek shelter
-              immediately in a basement or an interior room away from windows.
-            </Text>
-            <View style={styles.warningActions}>
-              <Pressable
-                accessibilityRole="button"
-                hitSlop={12}
-                onPress={dismissTornadoWarning}
-              >
-                <Text style={styles.warningOk}>OK</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <TornadoWarningModal visible={tornado.visible} onOk={tornado.dismiss} />
 
       <TalkBlockHeader />
       <View style={styles.content}>
@@ -634,93 +576,6 @@ const styles = StyleSheet.create({
   },
   panicTitle: { color: colors.primary, fontSize: 16, fontWeight: "700" },
   panicBody: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  warningBackdrop: {
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 28,
-  },
-  warningCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 4,
-    elevation: 8,
-    maxWidth: 360,
-    paddingBottom: 10,
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    width: "100%",
-  },
-  warningHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 10,
-  },
-  warningIconWrap: {
-    alignItems: "center",
-    height: 22,
-    justifyContent: "center",
-    marginTop: 1,
-    width: 24,
-  },
-  warningTriangle: {
-    backgroundColor: "transparent",
-    borderBottomColor: "#D93025",
-    borderBottomWidth: 20,
-    borderLeftColor: "transparent",
-    borderLeftWidth: 11,
-    borderRightColor: "transparent",
-    borderRightWidth: 11,
-    borderStyle: "solid",
-    height: 0,
-    position: "absolute",
-    top: 1,
-    width: 0,
-  },
-  warningIconMark: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 14,
-    marginTop: 7,
-    textAlign: "center",
-    zIndex: 1,
-  },
-  warningHeaderTitle: {
-    color: "#202124",
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "400",
-    lineHeight: 22,
-  },
-  warningTitle: {
-    color: "#202124",
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 14,
-  },
-  warningBody: {
-    color: "#3C4043",
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 6,
-  },
-  warningActions: {
-    alignItems: "flex-end",
-    marginTop: 18,
-  },
-  warningOk: {
-    color: "#1A73E8",
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-  },
   skipChip: {
     alignItems: "center",
     backgroundColor: "rgba(20,20,20,0.92)",
